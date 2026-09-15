@@ -46,8 +46,8 @@ function installStadiumTweaks(){
   style.textContent=`
     .stadium-runner{flex-direction:column-reverse !important;align-items:center !important;gap:2px !important;pointer-events:auto !important;cursor:default;}
     .stadium-nameplate{transform:translateY(-2px);transition:transform .16s ease,filter .16s ease,box-shadow .16s ease;}
-    .stadium-runner:hover{z-index:999 !important;}
-    .stadium-runner:hover .stadium-nameplate{transform:translateY(-2px) scale(1.05);filter:brightness(1.08);box-shadow:0 14px 34px rgba(0,0,0,.55),0 0 0 2px rgba(255,255,255,.45) !important;}
+    .stadium-runner:hover,.stadium-runner.tap-active{z-index:999 !important;}
+    .stadium-runner:hover .stadium-nameplate,.stadium-runner.tap-active .stadium-nameplate{transform:translateY(-2px) scale(1.05);filter:brightness(1.08);box-shadow:0 14px 34px rgba(0,0,0,.55),0 0 0 2px rgba(255,255,255,.45) !important;}
     .finish-line{width:60px !important;}
 
     .checkpoint{
@@ -358,6 +358,15 @@ function renderStadium(data){
       <div class="stadium-nameplate"><strong>${label}</strong><span>${status}</span></div>
     </div>`;
   }).join('');
+
+  container.querySelectorAll('.stadium-runner').forEach(runner=>{
+    runner.addEventListener('click',event=>{
+      event.stopPropagation();
+      const wasActive=runner.classList.contains('tap-active');
+      container.querySelectorAll('.stadium-runner.tap-active').forEach(el=>el.classList.remove('tap-active'));
+      if(!wasActive) runner.classList.add('tap-active');
+    });
+  });
 }
 
 function renderMiniRace(data){
@@ -446,6 +455,11 @@ async function fetchData(){
 function escapeHtml(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])); }
 function launchConfetti(){ const layer=document.querySelector('#confettiLayer'); const palette=['#ffd65c','#62e89a','#60cfff','#ff78b8','#b89bff']; for(let i=0;i<70;i++){ const e=document.createElement('i'); e.className='confetti'; e.style.left=`${Math.random()*100}%`; e.style.background=palette[i%palette.length]; e.style.setProperty('--drift',`${(Math.random()-.5)*260}px`); e.style.animationDelay=`${Math.random()*.45}s`; layer.appendChild(e); setTimeout(()=>e.remove(),2600); } }
 
+document.addEventListener('click',event=>{
+  if(!event.target.closest('.stadium-runner')){
+    document.querySelectorAll('.stadium-runner.tap-active').forEach(el=>el.classList.remove('tap-active'));
+  }
+});
 document.querySelector('#fullscreenBtn').addEventListener('click',()=>{ if(!document.fullscreenElement) document.documentElement.requestFullscreen?.(); else document.exitFullscreen?.(); });
 installStadiumTweaks();
 installSalesPodium();
