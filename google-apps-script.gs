@@ -4,9 +4,10 @@
  * Who has access: Anyone
  *
  * Monthly tab naming convention:
- *   TPJan2026, TPF​​eb2026, TPMar2026 ... TPSep2026, TPOct2026, etc.
+ *   TPJan2026, TPFeb2026, TPMar2026 ... TPSep2026, TPOct2026, etc.
  *
  * The script automatically uses the latest month/year tab it can find.
+ * Finish order is permanently logged in a hidden RaceFinishLog sheet.
  */
 function doGet() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -35,10 +36,30 @@ function doGet() {
       workMode: row[13] || ''
     }));
 
-  runners.sort((a,b) => b.achievement - a.achievement || b.revenue - a.revenue);
-  runners.forEach((r,i) => r.rank = i + 1);
-
   const parsed = parseMonthlyTab_(sheet.getName());
+  const finishMap = syncFinishLog_(ss, sheet.getName(), parsed, runners);
+
+  runners.forEach(r => {
+    const finish = finishMap[raceKey_(r)];
+    if (finish) {
+      r.finishPlace = finish.place;
+      r.finishAt = finish.finishedAt;
+      r.finishDate = finish.finishDate;
+      r.finishDays = finish.daysToFinish;
+    }
+  });
+
+  // Once someone finishes, their finishing place is fixed forever for that month.
+  // Finishers stay above active racers in finish order; active racers remain sorted by achievement.
+  runners.sort((a,b) => {
+    const ap = Number(a.finishPlace) || 0;
+    const bp = Number(b.finishPlace) || 0;
+    if (ap && bp) return ap - bp;
+    if (ap) return -1;
+    if (bp) return 1;
+    return b.achievement - a.achievement || b.revenue - a.revenue;
+  });
+  runners.forEach((r,i) => r.rank = i + 1);
 
   return ContentService
     .createTextOutput(JSON.stringify({
@@ -48,6 +69,95 @@ function doGet() {
       runners
     }))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+function syncFinishLog_(ss, sourceTab, parsed, runners) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    let log = ss.getSheetByName('RaceFinishLog');
+    if (!log) {
+      log = ss.insertSheet('RaceFinishLog');
+      log.getRange(1, 1, 1, 8).setValues([[
+        'Month Tab','Place','Name','Staff Code','Finished At','Finish Date','Days To Finish','Achievement When Logged'
+      ]]);
+      log.setFrozenRows(1);
+      log.hideSheet();
+    }
+
+    const lastRow = log.getLastRow();
+    const rows = lastRow > 1 ? log.getRange(2, 1, lastRow - 1, 8).getValues() : [];
+    const current = {};
+    let maxPlace = 0;
+
+    rows.forEach(row => {
+      if (String(row[0]) !== sourceTab) return;
+      const key = `${String(row[3] || '').trim()}|${String(row[2] || '').trim().toLowerCase()}`;
+      const place = Number(row[1]) || 0;
+      current[key] = {
+        place,
+        finishedAt: row[4] instanceof Date ? row[4].toISOString() : String(row[4] || ''),
+        finishDate: String(row[5] || ''),
+        daysToFinish: Number(row[6]) || 0
+      };
+      maxPlace = Math.max(maxPlace, place);
+    });
+
+    // If several people are already over 100% the first time this version runs,
+    // they are registered in current leaderboard order. Future finishers are exact first-detected order.
+    const newFinishers = runners
+      .filter(r => r.achievement >= 100 && !current[raceKey_(r)])
+      .sort((a,b) => b.achievement - a.achievement || b.revenue - a.revenue);
+
+    const now = new Date();
+    const tz = ss.getSpreadsheetTimeZone() || Session.getScriptTimeZone() || 'Asia/Bangkok';
+    const daysToFinish = parsed ? getRaceDay_(now, parsed.year, parsed.monthIndex, tz) : '';
+    const newRows = [];
+
+    newFinishers.forEach(r => {
+      maxPlace += 1;
+      const finishDate = Utilities.formatDate(now, tz, 'd MMM yyyy');
+      const key = raceKey_(r);
+      current[key] = {
+        place: maxPlace,
+        finishedAt: now.toISOString(),
+        finishDate,
+        daysToFinish: Number(daysToFinish) || 0
+      };
+      newRows.push([
+        sourceTab,
+        maxPlace,
+        r.name,
+        r.staffCode,
+        now,
+        finishDate,
+        daysToFinish,
+        r.achievement
+      ]);
+    });
+
+    if (newRows.length) {
+      log.getRange(log.getLastRow() + 1, 1, newRows.length, 8).setValues(newRows);
+    }
+
+    return current;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function raceKey_(runner) {
+  return `${String(runner.staffCode || '').trim()}|${String(runner.name || '').trim().toLowerCase()}`;
+}
+
+function getRaceDay_(date, year, monthIndex, timezone) {
+  const localDay = Number(Utilities.formatDate(date, timezone, 'd'));
+  const localMonth = Number(Utilities.formatDate(date, timezone, 'M')) - 1;
+  const localYear = Number(Utilities.formatDate(date, timezone, 'yyyy'));
+  if (localYear === year && localMonth === monthIndex) return localDay;
+
+  const start = new Date(year, monthIndex, 1);
+  return Math.max(1, Math.ceil((date.getTime() - start.getTime()) / 86400000));
 }
 
 function getLatestMonthlySheet_(ss) {
