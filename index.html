@@ -104,6 +104,99 @@
       font-size:14px !important;
     }
 
+    /* Race Podium: much larger winner text and medal emojis. */
+    .podium-card {
+      overflow:visible !important;
+      padding-top:26px !important;
+    }
+    .podium-card .section-title { font-size:34px !important; }
+    .podium-card .section-note { font-size:18px !important; }
+    .podium {
+      height:430px !important;
+      gap:28px !important;
+      padding-top:70px !important;
+      overflow:visible !important;
+    }
+    .podium-slot {
+      position:relative;
+      overflow:visible;
+    }
+    .podium-person {
+      min-height:220px !important;
+      margin-bottom:18px !important;
+      position:relative;
+      z-index:5;
+      transform-origin:center bottom;
+    }
+    .podium-medal {
+      font-size:84px !important;
+      line-height:1 !important;
+      filter:drop-shadow(0 8px 12px rgba(0,0,0,.36));
+    }
+    .podium-name {
+      margin-top:10px !important;
+      font-size:48px !important;
+      line-height:1 !important;
+      letter-spacing:-.04em;
+      text-shadow:0 3px 16px rgba(0,0,0,.45);
+    }
+    .podium-slot.first .podium-name { font-size:54px !important; }
+    .podium-days {
+      margin-top:10px !important;
+      font-size:30px !important;
+      line-height:1.05 !important;
+    }
+    .podium-block span { font-size:70px !important; }
+    .podium-block small { font-size:22px !important; }
+
+    /* Winners continuously celebrate without changing the podium layout. */
+    .podium-slot.winner .podium-person {
+      animation:podiumBounce 1.15s ease-in-out infinite;
+    }
+    .podium-slot.second.winner .podium-person { animation-delay:.16s; }
+    .podium-slot.third.winner .podium-person { animation-delay:.32s; }
+
+    @keyframes podiumBounce {
+      0%,100% { transform:translateY(0) scale(1); }
+      45% { transform:translateY(-22px) scale(1.035); }
+      60% { transform:translateY(-16px) scale(1.02); }
+    }
+
+    .podium-slot.winner::before,
+    .podium-slot.winner::after {
+      position:absolute;
+      z-index:4;
+      top:28px;
+      width:130px;
+      text-align:center;
+      font-size:32px;
+      line-height:1.3;
+      pointer-events:none;
+      opacity:0;
+      filter:drop-shadow(0 4px 8px rgba(0,0,0,.25));
+      animation:podiumConfetti 1.7s ease-out infinite;
+    }
+    .podium-slot.winner::before {
+      content:"🎉  ✨  🎊";
+      left:-62px;
+    }
+    .podium-slot.winner::after {
+      content:"🎊  ✨  🎉";
+      right:-62px;
+      animation-delay:.55s;
+    }
+    .podium-slot.second.winner::before,
+    .podium-slot.second.winner::after { animation-delay:.25s; }
+    .podium-slot.third.winner::before,
+    .podium-slot.third.winner::after { animation-delay:.45s; }
+
+    @keyframes podiumConfetti {
+      0% { opacity:0; transform:translateY(18px) scale(.72) rotate(-8deg); }
+      18% { opacity:1; }
+      60% { opacity:.95; }
+      100% { opacity:0; transform:translateY(-72px) scale(1.08) rotate(10deg); }
+    }
+
     @media (max-width:900px) {
       .mini-race-title { font-size:20px !important; }
       .mini-name { font-size:14px !important; }
@@ -123,6 +216,19 @@
         min-width:54px !important;
         transform:scale(2.4);
       }
+
+      .podium { height:310px !important; gap:10px !important; padding-top:44px !important; }
+      .podium-person { min-height:150px !important; margin-bottom:10px !important; }
+      .podium-medal { font-size:52px !important; }
+      .podium-name,
+      .podium-slot.first .podium-name { font-size:26px !important; }
+      .podium-days { font-size:16px !important; }
+      .podium-block span { font-size:46px !important; }
+      .podium-block small { font-size:13px !important; }
+      .podium-slot.winner::before,
+      .podium-slot.winner::after { font-size:20px; width:76px; }
+      .podium-slot.winner::before { left:-28px; }
+      .podium-slot.winner::after { right:-28px; }
     }
   </style>
 </head>
@@ -231,5 +337,19 @@
 
   <div id="confettiLayer" class="confetti-layer" aria-hidden="true"></div>
   <script src="script.js"></script>
+  <script>
+    /* Mark only filled podium slots as winners so empty places don't celebrate. */
+    const podiumNode = document.querySelector('#podium');
+    const syncPodiumWinnerEffects = () => {
+      document.querySelectorAll('.podium-slot').forEach(slot => {
+        const name = slot.querySelector('.podium-name')?.textContent?.trim();
+        slot.classList.toggle('winner', Boolean(name && name !== '—'));
+      });
+    };
+    if (podiumNode) {
+      new MutationObserver(syncPodiumWinnerEffects).observe(podiumNode,{childList:true,subtree:true,characterData:true});
+      syncPodiumWinnerEffects();
+    }
+  </script>
 </body>
 </html>
