@@ -73,7 +73,25 @@
     .sales-table th {
       padding:16px 18px !important;
       font-size:14px !important;
+      cursor:pointer;
+      user-select:none;
+      transition:background .15s ease,color .15s ease;
+      white-space:nowrap;
     }
+    .sales-table th:hover,
+    .sales-table th.sort-active {
+      background:rgba(255,255,255,.055);
+      color:#dff8ff;
+    }
+    .sales-table th .sort-arrow {
+      display:inline-block;
+      min-width:14px;
+      margin-left:6px;
+      color:#8ee7ff;
+      font-size:.85em;
+      opacity:.35;
+    }
+    .sales-table th.sort-active .sort-arrow { opacity:1; }
     .sales-table td {
       padding:18px 18px !important;
       font-size:18px !important;
@@ -354,7 +372,7 @@
       <div class="sales-head">
         <div>
           <div class="sales-title">🏆 Live Top Sales Board</div>
-          <div class="sales-note">Ranked by revenue · live monthly stats</div>
+          <div class="sales-note">Click any column to sort ascending / descending</div>
         </div>
         <div class="sales-live"><span class="live-dot"></span> LIVE DATA</div>
       </div>
@@ -392,6 +410,71 @@
       new MutationObserver(syncPodiumWinnerEffects).observe(podiumNode,{childList:true,subtree:true,characterData:true});
       syncPodiumWinnerEffects();
     }
+
+    /* Click any Live Top Sales Board header to toggle ascending / descending. */
+    (() => {
+      const board = document.querySelector('#salesBoard');
+      const headers = [...document.querySelectorAll('.sales-table thead th')];
+      if (!board || !headers.length) return;
+
+      const sortState = { column:3, direction:'desc' };
+      const rankFromCell = cell => {
+        const t=(cell?.textContent || '').trim();
+        if(t.includes('🥇')) return 1;
+        if(t.includes('🥈')) return 2;
+        if(t.includes('🥉')) return 3;
+        return Number(t.replace(/[^0-9.-]/g,'')) || 0;
+      };
+      const numericFromCell = cell => Number((cell?.textContent || '').replace(/[^0-9.-]/g,'')) || 0;
+      const valueFor = (row,col) => {
+        const cell=row.cells[col];
+        if(col===0) return rankFromCell(cell);
+        if(col===3 || col===4 || col===5) return numericFromCell(cell);
+        return (cell?.textContent || '').trim().toLowerCase();
+      };
+      const compare = (a,b,col) => {
+        const av=valueFor(a,col), bv=valueFor(b,col);
+        if(typeof av==='number' && typeof bv==='number') return av-bv;
+        return String(av).localeCompare(String(bv),undefined,{numeric:true,sensitivity:'base'});
+      };
+      const updateHeaders = () => {
+        headers.forEach((th,i) => {
+          let arrow=th.querySelector('.sort-arrow');
+          if(!arrow){ arrow=document.createElement('span'); arrow.className='sort-arrow'; th.appendChild(arrow); }
+          const active=i===sortState.column;
+          th.classList.toggle('sort-active',active);
+          th.setAttribute('aria-sort',active ? (sortState.direction==='asc'?'ascending':'descending') : 'none');
+          arrow.textContent=active ? (sortState.direction==='asc'?'▲':'▼') : '↕';
+        });
+      };
+      const applySort = () => {
+        const rows=[...board.querySelectorAll('tr')];
+        rows.sort((a,b) => {
+          const result=compare(a,b,sortState.column);
+          if(result!==0) return sortState.direction==='asc' ? result : -result;
+          return String(valueFor(a,1)).localeCompare(String(valueFor(b,1)),undefined,{sensitivity:'base'});
+        });
+        rows.forEach(row=>board.appendChild(row));
+        updateHeaders();
+      };
+
+      headers.forEach((th,index) => th.addEventListener('click',() => {
+        if(sortState.column===index) sortState.direction=sortState.direction==='asc'?'desc':'asc';
+        else {
+          sortState.column=index;
+          sortState.direction=(index===0 || index===3 || index===4 || index===5)?'desc':'asc';
+        }
+        applySort();
+      }));
+
+      let sorting=false;
+      new MutationObserver(() => {
+        if(sorting) return;
+        sorting=true;
+        requestAnimationFrame(() => { applySort(); sorting=false; });
+      }).observe(board,{childList:true});
+      updateHeaders();
+    })();
   </script>
 </body>
 </html>
