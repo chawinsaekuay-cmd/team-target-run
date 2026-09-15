@@ -114,7 +114,6 @@ function renderSalesBoard(data){
   tbody.innerHTML=ranked.map((r,i)=>{
     const rank=i+1;
     const badge=rank<=3?medal(rank):String(rank);
-    const avgDeal=r.deals>0?r.revenue/r.deals:0;
     const topClass=rank<=3?` top-${rank}`:'';
     return `<tr class="sales-row${topClass}">
       <td class="sales-rank">${badge}</td>
@@ -122,7 +121,6 @@ function renderSalesBoard(data){
       <td><span class="level-pill">${escapeHtml(r.level || '-')}</span></td>
       <td class="sales-revenue">฿${money(r.revenue)}</td>
       <td class="sales-deals">${money(r.deals)}</td>
-      <td>฿${money(avgDeal)}</td>
       <td><span class="target-pill ${r.achievement>=100?'hit':''}">${pct(r.achievement)}</span></td>
     </tr>`;
   }).join('');
