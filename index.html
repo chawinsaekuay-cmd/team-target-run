@@ -53,7 +53,7 @@
       padding-right:34px !important;
       margin-right:8px;
       scrollbar-width:none !important;
-      -ms-overflow-style:none;
+      -ms-overflow-style:none !important;
     }
     .finish-history::-webkit-scrollbar {
       width:0 !important;
@@ -97,6 +97,29 @@
       font-size:18px !important;
     }
     .sales-rank { font-size:22px !important; }
+
+    /* WFH eligibility is intentionally simple: green WFH, white OFFICE + gap to target. */
+    .wfh-cell { white-space:nowrap; }
+    .wfh-earned {
+      color:#58e49a;
+      font-weight:900;
+      letter-spacing:.04em;
+    }
+    .wfh-office {
+      color:#f4f7fb;
+      font-weight:900;
+      letter-spacing:.04em;
+    }
+    .wfh-more {
+      color:rgba(244,247,251,.72);
+      font-size:.82em;
+      font-weight:700;
+    }
+    .wfh-na {
+      color:rgba(244,247,251,.48);
+      font-size:.88em;
+      font-weight:700;
+    }
 
     /* Make top-3 medals visually ~3x larger without changing row height. */
     .sales-row.top-1 .sales-rank,
@@ -387,6 +410,7 @@
               <th>Revenue</th>
               <th>Deals</th>
               <th>Target %</th>
+              <th>WFH</th>
             </tr>
           </thead>
           <tbody id="salesBoard"></tbody>
@@ -411,6 +435,105 @@
       syncPodiumWinnerEffects();
     }
 
+    /* Automatic 4-stage WFH status for the Live Top Sales Board. */
+    (() => {
+      const board=document.querySelector('#salesBoard');
+      if(!board) return;
+
+      const monthlyTargetByLevel={R3:90000,R4:125000,R5:180000};
+      const monthMap={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+
+      const bangkokNow=() => {
+        const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Bangkok',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+        const get=t=>Number(parts.find(p=>p.type===t)?.value||0);
+        return {year:get('year'),month:get('month')-1,day:get('day')};
+      };
+
+      const selectedMonth=() => {
+        const tab=(typeof state!=='undefined' && (state.selectedMonth || state.lastGood?.sourceTab || state.currentMonthTab)) || '';
+        const match=String(tab).match(/^TP([A-Z][a-z]{2})(\d{4})$/);
+        if(match && Object.prototype.hasOwnProperty.call(monthMap,match[1])) return {year:Number(match[2]),month:monthMap[match[1]]};
+        const now=bangkokNow();
+        return {year:now.year,month:now.month};
+      };
+
+      const stageForMonth=() => {
+        const now=bangkokNow();
+        const selected=selectedMonth();
+        const selectedKey=selected.year*12+selected.month;
+        const nowKey=now.year*12+now.month;
+        if(selectedKey<nowKey) return 4;
+        if(selectedKey>nowKey) return 1;
+
+        const first=new Date(Date.UTC(selected.year,selected.month,1));
+        const firstDow=first.getUTCDay();
+        let week1Start=1;
+        if(firstDow===6) week1Start=3;
+        else if(firstDow===0) week1Start=2;
+        const startDow=new Date(Date.UTC(selected.year,selected.month,week1Start)).getUTCDay();
+        const week1End=week1Start+(5-startDow);
+        const week2Start=week1End+3;
+        const week3Start=week2Start+7;
+        const week4Start=week3Start+7;
+
+        if(now.day<week2Start) return 1;
+        if(now.day<week3Start) return 2;
+        if(now.day<week4Start) return 3;
+        return 4;
+      };
+
+      const moneyFromCell=cell => Number((cell?.textContent||'').replace(/[^0-9.-]/g,''))||0;
+      const formatGap=value => {
+        const n=Math.max(0,Math.ceil(value));
+        if(n>=1000){
+          const k=n/1000;
+          return `฿${Number.isInteger(k)?k.toFixed(0):k.toFixed(1)}k`;
+        }
+        return `฿${new Intl.NumberFormat('en-US',{maximumFractionDigits:0}).format(n)}`;
+      };
+
+      const syncWFH=() => {
+        const stage=stageForMonth();
+        const factor=[0,.25,.5,.75,1][stage];
+        [...board.querySelectorAll('tr')].forEach(row => {
+          if(row.cells.length<6) return;
+          let cell=row.cells[6];
+          if(!cell){
+            cell=row.insertCell(-1);
+            cell.className='wfh-cell';
+          }
+          const level=(row.cells[2]?.textContent||'').trim().toUpperCase().replace(/\s+/g,'');
+          const revenue=moneyFromCell(row.cells[3]);
+          const monthlyTarget=monthlyTargetByLevel[level];
+
+          if(!monthlyTarget){
+            cell.dataset.sort='0';
+            cell.innerHTML='<span class="wfh-na">Not eligible</span>';
+            return;
+          }
+
+          const required=monthlyTarget*factor;
+          const more=Math.max(0,required-revenue);
+          if(more<=0){
+            cell.dataset.sort='3000000000';
+            cell.innerHTML='<span class="wfh-earned">WFH</span>';
+          } else {
+            cell.dataset.sort=String(2000000000-more);
+            cell.innerHTML=`<span class="wfh-office">OFFICE</span><span class="wfh-more"> · ${formatGap(more)} more</span>`;
+          }
+        });
+      };
+
+      let syncing=false;
+      new MutationObserver(() => {
+        if(syncing) return;
+        syncing=true;
+        requestAnimationFrame(() => { syncWFH(); syncing=false; });
+      }).observe(board,{childList:true});
+      syncWFH();
+      setInterval(syncWFH,60000);
+    })();
+
     /* Click any Live Top Sales Board header to toggle ascending / descending. */
     (() => {
       const board = document.querySelector('#salesBoard');
@@ -430,6 +553,7 @@
         const cell=row.cells[col];
         if(col===0) return rankFromCell(cell);
         if(col===3 || col===4 || col===5) return numericFromCell(cell);
+        if(col===6) return Number(cell?.dataset.sort || 0);
         return (cell?.textContent || '').trim().toLowerCase();
       };
       const compare = (a,b,col) => {
@@ -462,7 +586,7 @@
         if(sortState.column===index) sortState.direction=sortState.direction==='asc'?'desc':'asc';
         else {
           sortState.column=index;
-          sortState.direction=(index===0 || index===3 || index===4 || index===5)?'desc':'asc';
+          sortState.direction=(index===0 || index===3 || index===4 || index===5 || index===6)?'desc':'asc';
         }
         applySort();
       }));
