@@ -57,25 +57,27 @@ h1 span { color:#ffd65c; text-shadow:0 0 26px rgba(255,214,92,.24); }
 .race-head { margin-bottom:14px; }
 .updated-wrap { display:flex; align-items:center; gap:12px; }
 .stadium-stage { position:relative; min-height:560px; display:flex; align-items:center; justify-content:center; padding:10px 8px 2px; }
-.stadium-glow { position:absolute; inset:4% 3%; border-radius:50%; background:radial-gradient(ellipse at center,rgba(65,153,255,.12),transparent 64%); filter:blur(8px); }
-.oval-track { width:94%; aspect-ratio:1.82/1; position:relative; border-radius:50%; background:linear-gradient(180deg,#9a4638,#6b2e2b); border:7px solid #3b1d20; box-shadow:0 20px 60px rgba(0,0,0,.42),inset 0 0 0 2px rgba(255,255,255,.10),0 0 55px rgba(49,141,255,.08); overflow:visible; }
-.oval-track::before { content:""; position:absolute; inset:4%; border-radius:50%; border:1px solid rgba(255,255,255,.32); box-shadow:0 0 0 1px rgba(0,0,0,.08); }
-.lane { position:absolute; border-radius:50%; border:1px solid rgba(255,255,255,.35); pointer-events:none; }
+.stadium-glow { position:absolute; inset:4% 3%; border-radius:999px; background:radial-gradient(ellipse at center,rgba(65,153,255,.12),transparent 64%); filter:blur(8px); }
+
+/* Standard athletics-track silhouette: long straights + semicircular ends. */
+.oval-track { width:94%; aspect-ratio:1.92/1; position:relative; border-radius:999px; background:linear-gradient(180deg,#9a4638,#6b2e2b); border:7px solid #3b1d20; box-shadow:0 20px 60px rgba(0,0,0,.42),inset 0 0 0 2px rgba(255,255,255,.10),0 0 55px rgba(49,141,255,.08); overflow:visible; }
+.oval-track::before { content:""; position:absolute; inset:4%; border-radius:999px; border:1px solid rgba(255,255,255,.32); box-shadow:0 0 0 1px rgba(0,0,0,.08); }
+.lane { position:absolute; border-radius:999px; border:1px solid rgba(255,255,255,.35); pointer-events:none; }
 .lane-1 { inset:8%; }
 .lane-2 { inset:12%; }
 .lane-3 { inset:16%; }
 .lane-4 { inset:20%; }
 .lane-5 { inset:24%; }
-.infield { position:absolute; inset:28% 22%; border-radius:50%; background:radial-gradient(ellipse at center,#1a5938,#0d3524 70%); border:2px solid rgba(255,255,255,.10); box-shadow:inset 0 0 45px rgba(0,0,0,.25); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; }
+.infield { position:absolute; inset:28% 21%; border-radius:999px; background:radial-gradient(ellipse at center,#1a5938,#0d3524 70%); border:2px solid rgba(255,255,255,.10); box-shadow:inset 0 0 45px rgba(0,0,0,.25); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; }
 .infield-logo { font-size:clamp(23px,3.2vw,50px); font-weight:900; letter-spacing:-.04em; opacity:.78; }
 .infield-logo span { color:#ffd65c; }
 .infield-sub { margin-top:5px; font-size:10px; letter-spacing:.35em; font-weight:900; color:#8dbba0; }
 .finish-line { position:absolute; left:50%; bottom:6.5%; width:15px; height:18%; transform:translateX(-50%); border-radius:2px; background:conic-gradient(#fff 25%,#111 0 50%,#fff 0 75%,#111 0) 0 0 / 9px 9px; box-shadow:0 0 15px rgba(255,255,255,.22); z-index:4; }
 .checkpoint { position:absolute; z-index:3; font-size:10px; font-weight:900; color:#b9c9df; background:#07101dce; border:1px solid rgba(255,255,255,.12); padding:4px 7px; border-radius:999px; }
-.checkpoint-25 { left:4%; top:49%; transform:translate(-50%,-50%); }
-.checkpoint-50 { left:50%; top:4%; transform:translate(-50%,-50%); }
-.checkpoint-75 { right:4%; top:49%; transform:translate(50%,-50%); }
-.checkpoint-100 { left:50%; bottom:3%; transform:translate(-50%,50%); color:#ffd65c; }
+.checkpoint-25 { left:1%; top:50%; transform:translate(-50%,-50%); }
+.checkpoint-50 { left:50%; top:7%; transform:translate(-50%,-50%); }
+.checkpoint-75 { right:1%; top:50%; transform:translate(50%,-50%); }
+.checkpoint-100 { left:50%; bottom:5%; transform:translate(-50%,50%); color:#ffd65c; }
 .stadium-runners { position:absolute; inset:0; z-index:8; pointer-events:none; }
 .stadium-runner { position:absolute; transform:translate(calc(-50% + var(--offset)), -50%); display:flex; align-items:center; gap:5px; transition:left 1s cubic-bezier(.18,.8,.22,1),top 1s cubic-bezier(.18,.8,.22,1); }
 .stadium-runner-icon { font-size:20px; filter:drop-shadow(0 3px 5px rgba(0,0,0,.65)); }
