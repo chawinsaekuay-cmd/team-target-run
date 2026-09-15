@@ -261,3 +261,6 @@ body .podium-grid .deal-podium-card .podium-slot.first .podium-name {
   body .podium-grid .sales-podium-card .podium-slot::after,
   body .podium-grid .deal-podium-card .podium-slot::after { right:-28px !important; }
 }
+
+/* WFH gap amount */
+.wfh-more { color:#ff5c5c !important; }
