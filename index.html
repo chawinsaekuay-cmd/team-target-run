@@ -24,27 +24,65 @@
 
     <section id="kpiGrid" class="kpi-grid"></section>
 
-    <section class="race-card">
-      <div class="race-head">
+    <section class="podium-card">
+      <div class="section-heading">
         <div>
-          <div class="race-title">🏁 500 Race</div>
-          <div class="race-note">Revenue achievement vs monthly target</div>
-        </div>
-        <div class="updated-wrap">
-          <span id="warning" class="warning hidden">Live data temporarily unavailable</span>
-          <span id="lastUpdated">Last updated: —</span>
+          <div class="section-title">🏆 Race Podium</div>
+          <div class="section-note">First 3 people to reach 100%</div>
         </div>
       </div>
+      <div id="podium" class="podium"></div>
+    </section>
 
-      <div class="scale-row" aria-hidden="true">
-        <span style="left:0%">0%</span>
-        <span style="left:25%">25%</span>
-        <span style="left:50%">50%</span>
-        <span style="left:75%">75%</span>
-        <span class="finish-label" style="left:100%">100%</span>
-      </div>
+    <section class="race-layout">
+      <section class="stadium-card">
+        <div class="race-head">
+          <div>
+            <div class="race-title">🏟️ 500 Race</div>
+            <div class="race-note">One full lap = 100% of monthly target</div>
+          </div>
+          <div class="updated-wrap">
+            <span id="warning" class="warning hidden">Live data temporarily unavailable</span>
+            <span id="lastUpdated">Last updated: —</span>
+          </div>
+        </div>
 
-      <div id="raceBoard" class="race-board"></div>
+        <div class="stadium-stage">
+          <div class="stadium-glow"></div>
+          <div class="oval-track">
+            <div class="lane lane-1"></div>
+            <div class="lane lane-2"></div>
+            <div class="lane lane-3"></div>
+            <div class="lane lane-4"></div>
+            <div class="lane lane-5"></div>
+            <div class="infield">
+              <div class="infield-logo">ตี๋ <span>UNIVERSE</span></div>
+              <div class="infield-sub">500 RACE</div>
+            </div>
+            <div class="finish-line" aria-hidden="true"></div>
+            <div class="checkpoint checkpoint-25">25%</div>
+            <div class="checkpoint checkpoint-50">50%</div>
+            <div class="checkpoint checkpoint-75">75%</div>
+            <div class="checkpoint checkpoint-100">100%</div>
+            <div id="stadiumRunners" class="stadium-runners"></div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="mini-race-card">
+        <div class="mini-race-head">
+          <div>
+            <div class="mini-race-title">500 Race</div>
+            <div class="mini-race-note">Quick view</div>
+          </div>
+          <div class="mini-live"><span class="live-dot"></span></div>
+        </div>
+        <div id="miniRaceBoard" class="mini-race-board"></div>
+        <div class="finish-history-wrap">
+          <div class="finish-history-title">Finish Order</div>
+          <div id="finishHistory" class="finish-history"></div>
+        </div>
+      </aside>
     </section>
 
     <section class="sales-card">
