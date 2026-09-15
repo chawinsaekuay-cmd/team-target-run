@@ -5,6 +5,10 @@ const POLL_MS = 10000;
 const FALLBACK_DATA = {
   updatedAt: new Date().toISOString(),
   monthLabel: 'September 2026',
+  sourceTab: 'TPSep2026',
+  currentTab: 'TPSep2026',
+  isCurrentMonth: true,
+  availableMonths: [{tab:'TPSep2026',label:'September 2026',isCurrent:true}],
   runners: [
     {name:"Beam",level:"R3",deals:3,targetRevenue:90000,revenue:124500,achievement:138.33,finishPlace:1,finishDays:9},
     {name:"Gorn",level:"R[1]N",deals:3,targetRevenue:37000,revenue:52000,achievement:140.54,finishPlace:2,finishDays:13},
@@ -24,7 +28,14 @@ const FALLBACK_DATA = {
 };
 
 const colors = ["#ffd65c","#9be8ff","#7ee29a","#a99cff","#ff8fbe","#ffb66e","#5bd6ce","#ff8181","#a8dd6e","#7cb7ff","#f9db79","#c5a4ff","#8ed7bc","#c7d0de","#ff9d76","#65e4ff","#f4a8ff","#a4f27a"];
-const state = { previousAchievements: new Map(), lastGood: null, initialized: false };
+const state = {
+  previousAchievements: new Map(),
+  lastGood: null,
+  initialized: false,
+  selectedMonth: new URLSearchParams(window.location.search).get('month') || '',
+  currentMonthTab: '',
+  availableMonths: []
+};
 
 function money(v){ return new Intl.NumberFormat('en-US',{maximumFractionDigits:0}).format(v || 0); }
 function pct(v){ return `${Number(v || 0).toFixed(2)}%`; }
@@ -182,6 +193,63 @@ function installSalesPodium(){
     </div>
     <div id="dealPodium" class="podium"></div>`;
   grid.appendChild(dealCard);
+}
+
+function installMonthSelector(){
+  if(document.querySelector('#monthSelector')) return;
+  const actions=document.querySelector('.top-actions');
+  if(!actions) return;
+
+  const wrap=document.createElement('label');
+  wrap.className='month-select-wrap';
+  wrap.innerHTML=`<span>MONTH</span><select id="monthSelector" aria-label="Choose dashboard month"><option>Loading…</option></select>`;
+  actions.insertBefore(wrap,actions.firstChild);
+
+  const style=document.createElement('style');
+  style.id='monthSelectorStyle';
+  style.textContent=`
+    .month-select-wrap{height:42px;display:flex;align-items:center;gap:9px;padding:0 12px 0 14px;border:1px solid rgba(255,255,255,.12);border-radius:999px;background:rgba(13,23,39,.86);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);}
+    .month-select-wrap>span{font-size:10px;font-weight:900;letter-spacing:.12em;color:#8ee7ff;}
+    #monthSelector{appearance:auto;background:transparent;color:#fff;border:0;outline:0;font:800 13px Inter,system-ui,sans-serif;cursor:pointer;max-width:170px;}
+    #monthSelector option{color:#111;background:#fff;}
+    .history-mode .live-dot{background:#8b98aa;box-shadow:none;animation:none;}
+    @media(max-width:620px){.month-select-wrap{height:38px;padding:0 9px;gap:5px}.month-select-wrap>span{display:none}#monthSelector{font-size:12px;max-width:128px}}
+  `;
+  document.head.appendChild(style);
+
+  wrap.querySelector('select').addEventListener('change',event=>{
+    state.selectedMonth=event.target.value;
+    state.previousAchievements.clear();
+    state.initialized=false;
+    state.lastGood=null;
+
+    const url=new URL(window.location.href);
+    if(state.selectedMonth && state.selectedMonth!==state.currentMonthTab) url.searchParams.set('month',state.selectedMonth);
+    else url.searchParams.delete('month');
+    window.history.replaceState({},'',url);
+    fetchData();
+  });
+}
+
+function updateMonthSelector(data){
+  const select=document.querySelector('#monthSelector');
+  if(!select) return;
+
+  const months=Array.isArray(data.availableMonths)&&data.availableMonths.length
+    ? data.availableMonths
+    : [{tab:data.sourceTab||'',label:data.monthLabel||data.sourceTab||'Current Month',isCurrent:true}];
+
+  state.availableMonths=months;
+  state.currentMonthTab=data.currentTab || (months.find(m=>m.isCurrent)||{}).tab || data.sourceTab || '';
+  if(!state.selectedMonth || !months.some(m=>m.tab===state.selectedMonth)) state.selectedMonth=data.sourceTab || state.currentMonthTab;
+
+  select.innerHTML=months.map(m=>`<option value="${escapeHtml(m.tab)}">${escapeHtml(m.label)}${m.isCurrent?' · LIVE':''}</option>`).join('');
+  select.value=data.sourceTab || state.selectedMonth;
+
+  const liveStatus=document.querySelector('#liveStatus');
+  const historical=data.isCurrentMonth===false || (state.currentMonthTab && data.sourceTab!==state.currentMonthTab);
+  document.body.classList.toggle('history-mode',historical);
+  if(liveStatus) liveStatus.innerHTML=historical?'<span class="live-dot"></span> HISTORY':'<span class="live-dot"></span> LIVE';
 }
 
 function normalize(payload){
@@ -418,7 +486,9 @@ function renderSalesBoard(data){
 }
 
 function render(data){
-  data=normalize(data); state.lastGood=data;
+  data=normalize(data);
+  state.lastGood=data;
+  updateMonthSelector(data);
   renderKpis(data);
   renderPodium(data);
   renderSalesPodium(data);
@@ -429,27 +499,46 @@ function render(data){
   renderSalesBoard(data);
 
   const d=new Date(data.updatedAt || Date.now());
-  document.querySelector('#lastUpdated').textContent=`Last updated: ${d.toLocaleTimeString('en-GB',{hour12:false})}`;
+  const historical=data.isCurrentMonth===false || (state.currentMonthTab && data.sourceTab!==state.currentMonthTab);
+  document.querySelector('#lastUpdated').textContent=historical
+    ? `Historical snapshot · ${data.monthLabel || data.sourceTab || ''}`
+    : `Last updated: ${d.toLocaleTimeString('en-GB',{hour12:false})}`;
+
   const monthLabel = data.monthLabel || data.sourceTab || 'Current Month';
   const eyebrow = document.querySelector('#monthEyebrow');
-  if (eyebrow) eyebrow.textContent = `${String(monthLabel).toUpperCase()} · FIRST TO 100% WINS`;
+  if (eyebrow) eyebrow.textContent = historical
+    ? `${String(monthLabel).toUpperCase()} · HISTORICAL VIEW`
+    : `${String(monthLabel).toUpperCase()} · FIRST TO 100% WINS`;
 
-  data.runners.forEach(r=>{
-    const prev=state.previousAchievements.get(r.name);
-    if(state.initialized && prev != null && prev < 100 && r.achievement >= 100) launchConfetti();
-    state.previousAchievements.set(r.name,r.achievement);
-  });
-  state.initialized=true;
+  if(!historical){
+    data.runners.forEach(r=>{
+      const prev=state.previousAchievements.get(r.name);
+      if(state.initialized && prev != null && prev < 100 && r.achievement >= 100) launchConfetti();
+      state.previousAchievements.set(r.name,r.achievement);
+    });
+    state.initialized=true;
+  }
 }
 
 async function fetchData(){
   const warning=document.querySelector('#warning');
   if(!API_URL){ render(FALLBACK_DATA); warning.classList.remove('hidden'); warning.textContent='Demo mode · add Apps Script URL for live data'; return; }
   try{
-    const url = `${API_URL}${API_URL.includes('?')?'&':'?'}t=${Date.now()}`;
-    const res=await fetch(url,{cache:'no-store'}); if(!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data=await res.json(); render(data); warning.classList.add('hidden');
-  }catch(err){ console.error(err); warning.classList.remove('hidden'); warning.textContent='Live data temporarily unavailable'; if(!state.lastGood) render(FALLBACK_DATA); }
+    const params=new URLSearchParams();
+    params.set('t',Date.now());
+    if(state.selectedMonth) params.set('month',state.selectedMonth);
+    const url=`${API_URL}${API_URL.includes('?')?'&':'?'}${params.toString()}`;
+    const res=await fetch(url,{cache:'no-store'});
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data=await res.json();
+    render(data);
+    warning.classList.add('hidden');
+  }catch(err){
+    console.error(err);
+    warning.classList.remove('hidden');
+    warning.textContent='Live data temporarily unavailable';
+    if(!state.lastGood) render(FALLBACK_DATA);
+  }
 }
 
 function escapeHtml(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])); }
@@ -463,4 +552,8 @@ document.addEventListener('click',event=>{
 document.querySelector('#fullscreenBtn').addEventListener('click',()=>{ if(!document.fullscreenElement) document.documentElement.requestFullscreen?.(); else document.exitFullscreen?.(); });
 installStadiumTweaks();
 installSalesPodium();
-fetchData(); setInterval(fetchData,POLL_MS);
+installMonthSelector();
+fetchData();
+setInterval(()=>{
+  if(!state.currentMonthTab || !state.selectedMonth || state.selectedMonth===state.currentMonthTab) fetchData();
+},POLL_MS);
