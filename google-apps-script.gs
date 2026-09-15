@@ -6,13 +6,20 @@
  * Monthly tab naming convention:
  *   TPJan2026, TPFeb2026, TPMar2026 ... TPSep2026, TPOct2026, etc.
  *
- * The script automatically uses the latest month/year tab it can find.
- * Finish order is permanently logged in a hidden RaceFinishLog sheet.
+ * The API defaults to the latest month, but also accepts ?month=TPSep2026
+ * for historical browsing. Finish order is permanently logged in a hidden
+ * RaceFinishLog sheet and is only updated while viewing the current month.
  */
-function doGet() {
+function doGet(e) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = getLatestMonthlySheet_(ss);
-  if (!sheet) throw new Error('No monthly TP tab found. Expected names like TPSep2026 or TPOct2026.');
+  const monthlySheets = getMonthlySheets_(ss);
+  if (!monthlySheets.length) throw new Error('No monthly TP tab found. Expected names like TPSep2026 or TPOct2026.');
+
+  const latest = monthlySheets[0];
+  const requestedMonth = String(e && e.parameter && e.parameter.month || '').trim();
+  const selected = monthlySheets.find(item => item.sheet.getName() === requestedMonth) || latest;
+  const sheet = selected.sheet;
+  const isCurrentMonth = sheet.getName() === latest.sheet.getName();
 
   const values = sheet.getRange(7, 1, Math.max(sheet.getLastRow() - 6, 1), 17).getDisplayValues();
 
@@ -36,8 +43,10 @@ function doGet() {
       workMode: row[13] || ''
     }));
 
-  const parsed = parseMonthlyTab_(sheet.getName());
-  const finishMap = syncFinishLog_(ss, sheet.getName(), parsed, runners);
+  const parsed = selected.parsed;
+  const finishMap = isCurrentMonth
+    ? syncFinishLog_(ss, sheet.getName(), parsed, runners)
+    : getFinishLog_(ss, sheet.getName());
 
   runners.forEach(r => {
     const finish = finishMap[raceKey_(r)];
@@ -49,8 +58,6 @@ function doGet() {
     }
   });
 
-  // Once someone finishes, their finishing place is fixed forever for that month.
-  // Finishers stay above active racers in finish order; active racers remain sorted by achievement.
   runners.sort((a,b) => {
     const ap = Number(a.finishPlace) || 0;
     const bp = Number(b.finishPlace) || 0;
@@ -61,14 +68,42 @@ function doGet() {
   });
   runners.forEach((r,i) => r.rank = i + 1);
 
+  const availableMonths = monthlySheets.map(item => ({
+    tab: item.sheet.getName(),
+    label: `${item.parsed.monthName} ${item.parsed.year}`,
+    isCurrent: item.sheet.getName() === latest.sheet.getName()
+  }));
+
   return ContentService
     .createTextOutput(JSON.stringify({
       updatedAt: new Date().toISOString(),
       sourceTab: sheet.getName(),
-      monthLabel: parsed ? `${parsed.monthName} ${parsed.year}` : sheet.getName(),
+      currentTab: latest.sheet.getName(),
+      isCurrentMonth,
+      monthLabel: `${parsed.monthName} ${parsed.year}`,
+      availableMonths,
       runners
     }))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+function getFinishLog_(ss, sourceTab) {
+  const log = ss.getSheetByName('RaceFinishLog');
+  if (!log || log.getLastRow() <= 1) return {};
+
+  const rows = log.getRange(2, 1, log.getLastRow() - 1, 8).getValues();
+  const current = {};
+  rows.forEach(row => {
+    if (String(row[0]) !== sourceTab) return;
+    const key = `${String(row[3] || '').trim()}|${String(row[2] || '').trim().toLowerCase()}`;
+    current[key] = {
+      place: Number(row[1]) || 0,
+      finishedAt: row[4] instanceof Date ? row[4].toISOString() : String(row[4] || ''),
+      finishDate: String(row[5] || ''),
+      daysToFinish: Number(row[6]) || 0
+    };
+  });
+  return current;
 }
 
 function syncFinishLog_(ss, sourceTab, parsed, runners) {
@@ -105,8 +140,6 @@ function syncFinishLog_(ss, sourceTab, parsed, runners) {
       maxPlace = Math.max(maxPlace, place);
     });
 
-    // Historical correction for September 2026.
-    // User-confirmed finish order/dates: Beam on 9 Sep, Gorn on 13 Sep.
     const manualFinish = sourceTab === 'TPSep2026' ? {
       beam: { place: 1, finishDate: '9 Sep 2026', daysToFinish: 9, iso: '2026-09-09T12:00:00+07:00' },
       gorn: { place: 2, finishDate: '13 Sep 2026', daysToFinish: 13, iso: '2026-09-13T12:00:00+07:00' }
@@ -201,15 +234,18 @@ function getRaceDay_(date, year, monthIndex, timezone) {
   return Math.max(1, Math.ceil((date.getTime() - start.getTime()) / 86400000));
 }
 
-function getLatestMonthlySheet_(ss) {
-  const candidates = ss.getSheets()
+function getMonthlySheets_(ss) {
+  return ss.getSheets()
     .map(sheet => {
       const parsed = parseMonthlyTab_(sheet.getName());
-      return parsed ? { sheet, sortKey: parsed.year * 12 + parsed.monthIndex } : null;
+      return parsed ? { sheet, parsed, sortKey: parsed.year * 12 + parsed.monthIndex } : null;
     })
     .filter(Boolean)
     .sort((a,b) => b.sortKey - a.sortKey);
+}
 
+function getLatestMonthlySheet_(ss) {
+  const candidates = getMonthlySheets_(ss);
   return candidates.length ? candidates[0].sheet : null;
 }
 
