@@ -162,3 +162,86 @@ h1 span { color:#ffd65c; text-shadow:0 0 26px rgba(255,214,92,.24); }
   .mini-race-board { grid-template-columns:1fr; }
   .finish-history { grid-template-columns:1fr; }
 }
+
+/* Keep all three podiums visually consistent: same medal size, bounce + confetti, and lifted off the bottom edge. */
+body .podium-grid .podium-card .podium {
+  padding-bottom:24px !important;
+}
+
+body .podium-grid .sales-podium-card .podium-medal,
+body .podium-grid .deal-podium-card .podium-medal {
+  font-size:84px !important;
+  line-height:1 !important;
+  filter:drop-shadow(0 8px 12px rgba(0,0,0,.36));
+}
+
+body .podium-grid .sales-podium-card .podium-slot .podium-person,
+body .podium-grid .deal-podium-card .podium-slot .podium-person,
+body .podium-grid .sales-podium-card .podium-slot.winner .podium-person,
+body .podium-grid .deal-podium-card .podium-slot.winner .podium-person {
+  animation:podiumBounce 1.15s ease-in-out infinite !important;
+  transform-origin:center bottom;
+}
+body .podium-grid .sales-podium-card .podium-slot.second .podium-person,
+body .podium-grid .deal-podium-card .podium-slot.second .podium-person { animation-delay:.16s !important; }
+body .podium-grid .sales-podium-card .podium-slot.third .podium-person,
+body .podium-grid .deal-podium-card .podium-slot.third .podium-person { animation-delay:.32s !important; }
+
+body .podium-grid .sales-podium-card .podium-slot::before,
+body .podium-grid .sales-podium-card .podium-slot::after,
+body .podium-grid .deal-podium-card .podium-slot::before,
+body .podium-grid .deal-podium-card .podium-slot::after,
+body .podium-grid .sales-podium-card .podium-slot.winner::before,
+body .podium-grid .sales-podium-card .podium-slot.winner::after,
+body .podium-grid .deal-podium-card .podium-slot.winner::before,
+body .podium-grid .deal-podium-card .podium-slot.winner::after {
+  display:block !important;
+  position:absolute;
+  z-index:4;
+  top:28px;
+  width:130px;
+  text-align:center;
+  font-size:32px;
+  line-height:1.3;
+  pointer-events:none;
+  opacity:0;
+  filter:drop-shadow(0 4px 8px rgba(0,0,0,.25));
+  animation:podiumConfetti 1.7s ease-out infinite !important;
+}
+body .podium-grid .sales-podium-card .podium-slot::before,
+body .podium-grid .deal-podium-card .podium-slot::before,
+body .podium-grid .sales-podium-card .podium-slot.winner::before,
+body .podium-grid .deal-podium-card .podium-slot.winner::before {
+  content:"🎉  ✨  🎊" !important;
+  left:-62px;
+}
+body .podium-grid .sales-podium-card .podium-slot::after,
+body .podium-grid .deal-podium-card .podium-slot::after,
+body .podium-grid .sales-podium-card .podium-slot.winner::after,
+body .podium-grid .deal-podium-card .podium-slot.winner::after {
+  content:"🎊  ✨  🎉" !important;
+  right:-62px;
+  animation-delay:.55s !important;
+}
+body .podium-grid .sales-podium-card .podium-slot.second::before,
+body .podium-grid .sales-podium-card .podium-slot.second::after,
+body .podium-grid .deal-podium-card .podium-slot.second::before,
+body .podium-grid .deal-podium-card .podium-slot.second::after { animation-delay:.25s !important; }
+body .podium-grid .sales-podium-card .podium-slot.third::before,
+body .podium-grid .sales-podium-card .podium-slot.third::after,
+body .podium-grid .deal-podium-card .podium-slot.third::before,
+body .podium-grid .deal-podium-card .podium-slot.third::after { animation-delay:.45s !important; }
+
+@media (max-width:900px) {
+  body .podium-grid .podium-card .podium { padding-bottom:14px !important; }
+  body .podium-grid .sales-podium-card .podium-medal,
+  body .podium-grid .deal-podium-card .podium-medal { font-size:52px !important; }
+  body .podium-grid .sales-podium-card .podium-slot::before,
+  body .podium-grid .sales-podium-card .podium-slot::after,
+  body .podium-grid .deal-podium-card .podium-slot::before,
+  body .podium-grid .deal-podium-card .podium-slot::after { font-size:20px !important; width:76px !important; }
+  body .podium-grid .sales-podium-card .podium-slot::before,
+  body .podium-grid .deal-podium-card .podium-slot::before { left:-28px !important; }
+  body .podium-grid .sales-podium-card .podium-slot::after,
+  body .podium-grid .deal-podium-card .podium-slot::after { right:-28px !important; }
+}
