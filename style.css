@@ -232,10 +232,26 @@ body .podium-grid .sales-podium-card .podium-slot.third::after,
 body .podium-grid .deal-podium-card .podium-slot.third::before,
 body .podium-grid .deal-podium-card .podium-slot.third::after { animation-delay:.45s !important; }
 
+/* Match Top Sales + Top Deals winner name size to the Race Podium. */
+body .podium-grid .sales-podium-card .podium-name,
+body .podium-grid .deal-podium-card .podium-name {
+  font-size:48px !important;
+  line-height:1 !important;
+  letter-spacing:-.04em !important;
+}
+body .podium-grid .sales-podium-card .podium-slot.first .podium-name,
+body .podium-grid .deal-podium-card .podium-slot.first .podium-name {
+  font-size:54px !important;
+}
+
 @media (max-width:900px) {
   body .podium-grid .podium-card .podium { padding-bottom:14px !important; }
   body .podium-grid .sales-podium-card .podium-medal,
   body .podium-grid .deal-podium-card .podium-medal { font-size:52px !important; }
+  body .podium-grid .sales-podium-card .podium-name,
+  body .podium-grid .sales-podium-card .podium-slot.first .podium-name,
+  body .podium-grid .deal-podium-card .podium-name,
+  body .podium-grid .deal-podium-card .podium-slot.first .podium-name { font-size:26px !important; }
   body .podium-grid .sales-podium-card .podium-slot::before,
   body .podium-grid .sales-podium-card .podium-slot::after,
   body .podium-grid .deal-podium-card .podium-slot::before,
