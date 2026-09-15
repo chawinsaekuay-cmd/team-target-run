@@ -146,14 +146,34 @@
       font-size:30px !important;
       line-height:1.05 !important;
     }
-    .podium-block span { font-size:70px !important; }
-    .podium-block small {
-      font-size:clamp(11px,1.15vw,18px) !important;
-      max-width:92%;
+
+    /* Keep place number + label fully inside every podium block. */
+    .podium-card .podium-slot .podium-block {
+      overflow:hidden !important;
+      padding:6px 8px 7px !important;
+      gap:2px !important;
+      justify-content:center !important;
+    }
+    .podium-card .podium-slot .podium-block span {
+      font-size:clamp(34px,3vw,52px) !important;
+      line-height:.9 !important;
+      flex:0 0 auto;
+    }
+    .podium-card .podium-slot .podium-block small {
+      margin-top:0 !important;
+      font-size:clamp(9px,.9vw,14px) !important;
+      max-width:100%;
       white-space:nowrap;
-      letter-spacing:.06em !important;
+      letter-spacing:.04em !important;
       line-height:1 !important;
       text-align:center;
+      flex:0 0 auto;
+    }
+    .podium-card .podium-slot.third .podium-block span {
+      font-size:38px !important;
+    }
+    .podium-card .podium-slot.third .podium-block small {
+      font-size:11px !important;
     }
 
     /* Winners continuously celebrate without changing the podium layout. */
@@ -230,11 +250,22 @@
       .podium-name,
       .podium-slot.first .podium-name { font-size:26px !important; }
       .podium-days { font-size:16px !important; }
-      .podium-block span { font-size:46px !important; }
-      .podium-block small {
-        font-size:clamp(9px,2.1vw,12px) !important;
-        max-width:94%;
-        letter-spacing:.04em !important;
+      .podium-card .podium-slot .podium-block {
+        padding:4px 5px 5px !important;
+        gap:1px !important;
+      }
+      .podium-card .podium-slot .podium-block span {
+        font-size:34px !important;
+      }
+      .podium-card .podium-slot .podium-block small {
+        font-size:9px !important;
+        letter-spacing:.02em !important;
+      }
+      .podium-card .podium-slot.third .podium-block span {
+        font-size:30px !important;
+      }
+      .podium-card .podium-slot.third .podium-block small {
+        font-size:8px !important;
       }
       .podium-slot.winner::before,
       .podium-slot.winner::after { font-size:20px; width:76px; }
