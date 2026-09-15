@@ -79,37 +79,71 @@ function installStadiumTweaks(){
 
     .podium-grid{
       display:grid;
-      grid-template-columns:minmax(0,1fr) minmax(0,1fr);
-      gap:16px;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:14px;
       margin-bottom:16px;
       align-items:stretch;
     }
     .podium-grid .podium-card{margin-bottom:0 !important;min-width:0;}
-    .sales-podium-card .podium{gap:14px !important;padding-left:10px !important;padding-right:10px !important;}
-    .sales-podium-card .podium-slot{width:min(190px,30%);}
-    .sales-podium-card .podium-medal{font-size:62px !important;}
-    .sales-podium-card .podium-name{font-size:36px !important;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-    .sales-podium-card .podium-slot.first .podium-name{font-size:40px !important;}
-    .sales-podium-card .podium-days{font-size:19px !important;white-space:nowrap;}
-    .sales-podium-card .podium-slot.winner .podium-person{animation:none !important;}
+    .sales-podium-card .podium,
+    .deal-podium-card .podium{gap:10px !important;padding-left:8px !important;padding-right:8px !important;}
+    .sales-podium-card .podium-slot,
+    .deal-podium-card .podium-slot{width:min(170px,31%);}
+    .sales-podium-card .podium-medal,
+    .deal-podium-card .podium-medal{font-size:54px !important;}
+    .sales-podium-card .podium-name,
+    .deal-podium-card .podium-name{font-size:30px !important;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .sales-podium-card .podium-slot.first .podium-name,
+    .deal-podium-card .podium-slot.first .podium-name{font-size:34px !important;}
+    .sales-podium-card .podium-days,
+    .deal-podium-card .podium-days{font-size:18px !important;white-space:nowrap;}
+    .sales-podium-card .podium-slot.winner .podium-person,
+    .deal-podium-card .podium-slot.winner .podium-person{animation:none !important;}
     .sales-podium-card .podium-slot.winner::before,
-    .sales-podium-card .podium-slot.winner::after{display:none !important;content:none !important;}
+    .sales-podium-card .podium-slot.winner::after,
+    .deal-podium-card .podium-slot.winner::before,
+    .deal-podium-card .podium-slot.winner::after{display:none !important;content:none !important;}
+
+    @media (max-width:1450px){
+      .podium-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);}
+      .podium-grid .deal-podium-card{grid-column:1 / -1;}
+      .sales-podium-card .podium-slot,
+      .deal-podium-card .podium-slot{width:min(190px,30%);}
+      .sales-podium-card .podium-medal,
+      .deal-podium-card .podium-medal{font-size:62px !important;}
+      .sales-podium-card .podium-name,
+      .deal-podium-card .podium-name{font-size:36px !important;}
+      .sales-podium-card .podium-slot.first .podium-name,
+      .deal-podium-card .podium-slot.first .podium-name{font-size:40px !important;}
+      .sales-podium-card .podium-days,
+      .deal-podium-card .podium-days{font-size:19px !important;}
+    }
 
     @media (max-width:1100px){
       .podium-grid{grid-template-columns:1fr;}
-      .sales-podium-card .podium-slot{width:min(210px,27vw);}
-      .sales-podium-card .podium-medal{font-size:72px !important;}
-      .sales-podium-card .podium-name{font-size:42px !important;}
-      .sales-podium-card .podium-slot.first .podium-name{font-size:46px !important;}
-      .sales-podium-card .podium-days{font-size:23px !important;}
+      .podium-grid .deal-podium-card{grid-column:auto;}
+      .sales-podium-card .podium-slot,
+      .deal-podium-card .podium-slot{width:min(210px,27vw);}
+      .sales-podium-card .podium-medal,
+      .deal-podium-card .podium-medal{font-size:72px !important;}
+      .sales-podium-card .podium-name,
+      .deal-podium-card .podium-name{font-size:42px !important;}
+      .sales-podium-card .podium-slot.first .podium-name,
+      .deal-podium-card .podium-slot.first .podium-name{font-size:46px !important;}
+      .sales-podium-card .podium-days,
+      .deal-podium-card .podium-days{font-size:23px !important;}
     }
 
     @media (max-width:900px){
       .checkpoint{font-size:18px !important;padding:6px 9px !important;}
-      .sales-podium-card .podium-medal{font-size:48px !important;}
+      .sales-podium-card .podium-medal,
+      .deal-podium-card .podium-medal{font-size:48px !important;}
       .sales-podium-card .podium-name,
-      .sales-podium-card .podium-slot.first .podium-name{font-size:24px !important;}
-      .sales-podium-card .podium-days{font-size:14px !important;}
+      .sales-podium-card .podium-slot.first .podium-name,
+      .deal-podium-card .podium-name,
+      .deal-podium-card .podium-slot.first .podium-name{font-size:24px !important;}
+      .sales-podium-card .podium-days,
+      .deal-podium-card .podium-days{font-size:14px !important;}
     }
   `;
   document.head.appendChild(style);
@@ -136,6 +170,18 @@ function installSalesPodium(){
     </div>
     <div id="salesPodium" class="podium"></div>`;
   grid.appendChild(salesCard);
+
+  const dealCard=document.createElement('section');
+  dealCard.className='podium-card deal-podium-card';
+  dealCard.innerHTML=`
+    <div class="section-heading">
+      <div>
+        <div class="section-title">🤝 Top Deals Podium</div>
+        <div class="section-note">Current top 3 by deals closed · changes live</div>
+      </div>
+    </div>
+    <div id="dealPodium" class="podium"></div>`;
+  grid.appendChild(dealCard);
 }
 
 function normalize(payload){
@@ -210,6 +256,31 @@ function renderSalesPodium(data){
     const cls=place===1?'first':place===2?'second':'third';
     const name=r?escapeHtml(r.name):'—';
     const detail=r?`฿${money(r.revenue)}`:'Waiting for sales';
+    return `<div class="podium-slot ${cls}">
+      <div class="podium-person">
+        <div class="podium-medal">${medal(place)}</div>
+        <div class="podium-name">${name}</div>
+        <div class="podium-days">${detail}</div>
+      </div>
+      <div class="podium-block"><span>${place}</span><small>${ordinal(place)} PLACE</small></div>
+    </div>`;
+  }).join('');
+}
+
+function renderDealPodium(data){
+  const podium=document.querySelector('#dealPodium');
+  if(!podium) return;
+  const ranked=[...data.runners]
+    .sort((a,b)=>b.deals-a.deals || b.revenue-a.revenue || a.name.localeCompare(b.name))
+    .slice(0,3);
+  const byPlace=new Map(ranked.map((r,i)=>[i+1,r]));
+  const order=[2,1,3];
+
+  podium.innerHTML=order.map(place=>{
+    const r=byPlace.get(place);
+    const cls=place===1?'first':place===2?'second':'third';
+    const name=r?escapeHtml(r.name):'—';
+    const detail=r?`${money(r.deals)} deal${r.deals===1?'':'s'}`:'Waiting for deals';
     return `<div class="podium-slot ${cls}">
       <div class="podium-person">
         <div class="podium-medal">${medal(place)}</div>
@@ -342,6 +413,7 @@ function render(data){
   renderKpis(data);
   renderPodium(data);
   renderSalesPodium(data);
+  renderDealPodium(data);
   renderStadium(data);
   renderMiniRace(data);
   renderFinishHistory(data);
