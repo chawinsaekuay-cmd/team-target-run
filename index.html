@@ -147,7 +147,14 @@
       line-height:1.05 !important;
     }
     .podium-block span { font-size:70px !important; }
-    .podium-block small { font-size:22px !important; }
+    .podium-block small {
+      font-size:clamp(11px,1.15vw,18px) !important;
+      max-width:92%;
+      white-space:nowrap;
+      letter-spacing:.06em !important;
+      line-height:1 !important;
+      text-align:center;
+    }
 
     /* Winners continuously celebrate without changing the podium layout. */
     .podium-slot.winner .podium-person {
@@ -224,7 +231,11 @@
       .podium-slot.first .podium-name { font-size:26px !important; }
       .podium-days { font-size:16px !important; }
       .podium-block span { font-size:46px !important; }
-      .podium-block small { font-size:13px !important; }
+      .podium-block small {
+        font-size:clamp(9px,2.1vw,12px) !important;
+        max-width:94%;
+        letter-spacing:.04em !important;
+      }
       .podium-slot.winner::before,
       .podium-slot.winner::after { font-size:20px; width:76px; }
       .podium-slot.winner::before { left:-28px; }
