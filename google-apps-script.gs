@@ -12,7 +12,10 @@ function doGet() {
   const values = sheet.getRange(7, 1, Math.max(sheet.getLastRow() - 6, 1), 17).getDisplayValues();
 
   const runners = values
-    .filter(row => String(row[0] || '').trim().startsWith('Chawin'))
+    .filter(row => {
+      const team = String(row[0] || '').trim();
+      return team.startsWith('Chawin') || team.startsWith('Junior');
+    })
     .filter(row => String(row[2] || '').trim())
     .map(row => ({
       team: row[0],
