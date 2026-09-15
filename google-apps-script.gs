@@ -6,14 +6,15 @@
  * Monthly tab naming convention:
  *   TPJan2026, TPFeb2026, TPMar2026 ... TPSep2026, TPOct2026, etc.
  *
- * The API defaults to the latest month, but also accepts ?month=TPSep2026
- * for historical browsing. Finish order is permanently logged in a hidden
- * RaceFinishLog sheet and is only updated while viewing the current month.
+ * Historical browsing starts from September 2026 onward.
+ * The API defaults to the latest month, but also accepts ?month=TPSep2026.
+ * Finish order is permanently logged in a hidden RaceFinishLog sheet and is
+ * only updated while viewing the current month.
  */
 function doGet(e) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const monthlySheets = getMonthlySheets_(ss);
-  if (!monthlySheets.length) throw new Error('No monthly TP tab found. Expected names like TPSep2026 or TPOct2026.');
+  if (!monthlySheets.length) throw new Error('No monthly TP tab found from September 2026 onward.');
 
   const latest = monthlySheets[0];
   const requestedMonth = String(e && e.parameter && e.parameter.month || '').trim();
@@ -235,10 +236,13 @@ function getRaceDay_(date, year, monthIndex, timezone) {
 }
 
 function getMonthlySheets_(ss) {
+  const historyStartKey = 2026 * 12 + 8; // September 2026
   return ss.getSheets()
     .map(sheet => {
       const parsed = parseMonthlyTab_(sheet.getName());
-      return parsed ? { sheet, parsed, sortKey: parsed.year * 12 + parsed.monthIndex } : null;
+      if (!parsed) return null;
+      const sortKey = parsed.year * 12 + parsed.monthIndex;
+      return sortKey >= historyStartKey ? { sheet, parsed, sortKey } : null;
     })
     .filter(Boolean)
     .sort((a,b) => b.sortKey - a.sortKey);
