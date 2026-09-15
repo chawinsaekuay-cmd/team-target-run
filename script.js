@@ -106,6 +106,8 @@ function installStadiumTweaks(){
     .deal-podium-card .podium-name{font-size:30px !important;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
     .sales-podium-card .podium-slot.first .podium-name,
     .deal-podium-card .podium-slot.first .podium-name{font-size:34px !important;}
+    .deal-podium-card .podium-name.joint-name{white-space:normal !important;overflow:visible !important;text-overflow:clip !important;line-height:1.05;text-wrap:balance;}
+    .deal-podium-card .joint-badge{margin-top:5px;font-size:10px;font-weight:900;letter-spacing:.12em;color:#8ee7ff;text-transform:uppercase;}
     .sales-podium-card .podium-days,
     .deal-podium-card .podium-days{font-size:18px !important;white-space:nowrap;}
     .sales-podium-card .podium-slot.winner .podium-person,
@@ -153,6 +155,7 @@ function installStadiumTweaks(){
       .sales-podium-card .podium-slot.first .podium-name,
       .deal-podium-card .podium-name,
       .deal-podium-card .podium-slot.first .podium-name{font-size:24px !important;}
+      .deal-podium-card .joint-badge{font-size:8px;}
       .sales-podium-card .podium-days,
       .deal-podium-card .podium-days{font-size:14px !important;}
     }
@@ -188,7 +191,7 @@ function installSalesPodium(){
     <div class="section-heading">
       <div>
         <div class="section-title">🤝 Top Deals Podium</div>
-        <div class="section-note">Current top 3 by deals closed · changes live</div>
+        <div class="section-note">Top 3 deal totals · joint positions share the podium</div>
       </div>
     </div>
     <div id="dealPodium" class="podium"></div>`;
@@ -338,24 +341,31 @@ function renderSalesPodium(data){
 function renderDealPodium(data){
   const podium=document.querySelector('#dealPodium');
   if(!podium) return;
-  const ranked=[...data.runners]
-    .sort((a,b)=>b.deals-a.deals || b.revenue-a.revenue || a.name.localeCompare(b.name))
-    .slice(0,3);
-  const byPlace=new Map(ranked.map((r,i)=>[i+1,r]));
+
+  const sorted=[...data.runners].sort((a,b)=>b.deals-a.deals || b.revenue-a.revenue || a.name.localeCompare(b.name));
+  const dealTotals=[...new Set(sorted.map(r=>r.deals))].sort((a,b)=>b-a).slice(0,3);
+  const groups=new Map(dealTotals.map((deals,i)=>[
+    i+1,
+    sorted.filter(r=>r.deals===deals)
+  ]));
   const order=[2,1,3];
 
   podium.innerHTML=order.map(place=>{
-    const r=byPlace.get(place);
+    const group=groups.get(place) || [];
     const cls=place===1?'first':place===2?'second':'third';
-    const name=r?escapeHtml(r.name):'—';
-    const detail=r?`${money(r.deals)} deal${r.deals===1?'':'s'}`:'Waiting for deals';
+    const hasTie=group.length>1;
+    const names=group.length ? group.map(r=>escapeHtml(r.name)).join(' / ') : '—';
+    const deals=group.length ? group[0].deals : null;
+    const detail=deals!=null ? `${money(deals)} deal${deals===1?'':'s'}` : 'Waiting for deals';
+    const joint=hasTie ? `<div class="joint-badge">JOINT ${ordinal(place)} · ${group.length} PEOPLE</div>` : '';
     return `<div class="podium-slot ${cls}">
       <div class="podium-person">
         <div class="podium-medal">${medal(place)}</div>
-        <div class="podium-name">${name}</div>
+        <div class="podium-name${hasTie?' joint-name':''}">${names}</div>
+        ${joint}
         <div class="podium-days">${detail}</div>
       </div>
-      <div class="podium-block"><span>${place}</span><small>${ordinal(place)} PLACE</small></div>
+      <div class="podium-block"><span>${place}</span><small>${hasTie?'JOINT ':''}${ordinal(place)} PLACE</small></div>
     </div>`;
   }).join('');
 }
