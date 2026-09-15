@@ -47,6 +47,25 @@ function installStadiumTweaks(){
     .stadium-runner{flex-direction:column-reverse !important;align-items:center !important;gap:2px !important;}
     .stadium-nameplate{transform:translateY(-2px);}
     .finish-line{width:60px !important;}
+
+    .checkpoint{
+      font-size:28px !important;
+      font-weight:900 !important;
+      color:rgba(235,239,245,.72) !important;
+      background:rgba(96,103,116,.30) !important;
+      border:1px solid rgba(255,255,255,.14) !important;
+      padding:8px 13px !important;
+      backdrop-filter:blur(3px);
+      -webkit-backdrop-filter:blur(3px);
+      box-shadow:none !important;
+    }
+    .checkpoint-25{left:auto !important;right:1% !important;top:50% !important;transform:translate(50%,-50%) !important;}
+    .checkpoint-75{right:auto !important;left:1% !important;top:50% !important;transform:translate(-50%,-50%) !important;}
+    .checkpoint-100{color:rgba(235,239,245,.72) !important;}
+
+    @media (max-width:900px){
+      .checkpoint{font-size:18px !important;padding:6px 9px !important;}
+    }
   `;
   document.head.appendChild(style);
 }
