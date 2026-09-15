@@ -65,6 +65,18 @@ function installStadiumTweaks(){
     .checkpoint-75{right:auto !important;left:1% !important;top:50% !important;transform:translate(-50%,-50%) !important;}
     .checkpoint-100{color:rgba(235,239,245,.72) !important;}
 
+    .mini-race-board{
+      max-height:430px;
+      overflow-y:auto;
+      overflow-x:hidden;
+      padding-right:18px !important;
+      margin-right:2px;
+      scrollbar-gutter:stable;
+    }
+    .mini-race-board::-webkit-scrollbar{width:8px;}
+    .mini-race-board::-webkit-scrollbar-track{background:rgba(255,255,255,.035);border-radius:999px;}
+    .mini-race-board::-webkit-scrollbar-thumb{background:rgba(255,255,255,.20);border-radius:999px;}
+
     @media (max-width:900px){
       .checkpoint{font-size:18px !important;padding:6px 9px !important;}
     }
@@ -130,12 +142,8 @@ function renderPodium(data){
   }).join('');
 }
 
-// Position a runner on a proper stadium/athletics-track shape:
-// two long straights connected by semicircular ends.
-// Start at the middle of the bottom straight and run to the RIGHT first.
 function stadiumPosition(progress){
   const p=Math.max(0,Math.min(100,Number(progress)||0))/100;
-
   const xLeft=20;
   const xRight=80;
   const yTop=10;
@@ -144,7 +152,6 @@ function stadiumPosition(progress){
   const rx=20;
   const ry=40;
   const aspect=1.92;
-
   const straight=(xRight-xLeft)/100*aspect;
   const radius=ry/100;
   const semicircle=Math.PI*radius;
@@ -152,14 +159,12 @@ function stadiumPosition(progress){
   let distance=p*total;
   const halfStraight=straight/2;
 
-  // Bottom middle -> bottom-right curve entrance.
   if(distance<=halfStraight){
     const t=distance/halfStraight;
     return {x:50+(xRight-50)*t,y:yBottom};
   }
   distance-=halfStraight;
 
-  // Right semicircle: bottom -> rightmost -> top.
   if(distance<=semicircle){
     const t=distance/semicircle;
     const theta=(90-180*t)*Math.PI/180;
@@ -167,14 +172,12 @@ function stadiumPosition(progress){
   }
   distance-=semicircle;
 
-  // Top straight: right -> left.
   if(distance<=straight){
     const t=distance/straight;
     return {x:xRight+(xLeft-xRight)*t,y:yTop};
   }
   distance-=straight;
 
-  // Left semicircle: top -> leftmost -> bottom.
   if(distance<=semicircle){
     const t=distance/semicircle;
     const theta=(270-180*t)*Math.PI/180;
@@ -182,7 +185,6 @@ function stadiumPosition(progress){
   }
   distance-=semicircle;
 
-  // Bottom-left curve exit -> finish in the middle.
   const t=Math.min(1,distance/halfStraight);
   return {x:xLeft+(50-xLeft)*t,y:yBottom};
 }
@@ -240,10 +242,7 @@ function renderFinishHistory(data){
 function renderSalesBoard(data){
   const tbody=document.querySelector('#salesBoard');
   if(!tbody) return;
-
-  const ranked=[...data.runners]
-    .sort((a,b)=>b.revenue-a.revenue || b.deals-a.deals || a.name.localeCompare(b.name));
-
+  const ranked=[...data.runners].sort((a,b)=>b.revenue-a.revenue || b.deals-a.deals || a.name.localeCompare(b.name));
   tbody.innerHTML=ranked.map((r,i)=>{
     const rank=i+1;
     const badge=rank<=3?medal(rank):String(rank);
