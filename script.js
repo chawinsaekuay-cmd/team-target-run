@@ -39,6 +39,18 @@ function ordinal(rank){
   return `${n}th`;
 }
 
+function installStadiumTweaks(){
+  if(document.querySelector('#stadiumTweaks')) return;
+  const style=document.createElement('style');
+  style.id='stadiumTweaks';
+  style.textContent=`
+    .stadium-runner{flex-direction:column-reverse !important;align-items:center !important;gap:2px !important;}
+    .stadium-nameplate{transform:translateY(-2px);}
+    .finish-line{width:60px !important;}
+  `;
+  document.head.appendChild(style);
+}
+
 function normalize(payload){
   const runners = (payload.runners || []).map(r => ({
     ...r,
@@ -98,12 +110,11 @@ function renderPodium(data){
 }
 
 // Position a runner on a proper stadium/athletics-track shape:
-// two long straights connected by semicircular ends, rather than an ellipse.
+// two long straights connected by semicircular ends.
+// Start at the middle of the bottom straight and run to the RIGHT first.
 function stadiumPosition(progress){
   const p=Math.max(0,Math.min(100,Number(progress)||0))/100;
 
-  // Coordinates are percentages inside the track element.
-  // The physical track is ~1.92:1, so horizontal distances are weighted accordingly.
   const xLeft=20;
   const xRight=80;
   const yTop=10;
@@ -118,43 +129,41 @@ function stadiumPosition(progress){
   const semicircle=Math.PI*radius;
   const total=2*straight+2*semicircle;
   let distance=p*total;
-
-  // Start/finish is at the middle of the bottom straight.
   const halfStraight=straight/2;
 
-  // Bottom middle -> bottom-left curve entrance.
+  // Bottom middle -> bottom-right curve entrance.
   if(distance<=halfStraight){
     const t=distance/halfStraight;
-    return {x:50+(xLeft-50)*t,y:yBottom};
+    return {x:50+(xRight-50)*t,y:yBottom};
   }
   distance-=halfStraight;
 
-  // Left semicircle: bottom -> leftmost -> top.
+  // Right semicircle: bottom -> rightmost -> top.
   if(distance<=semicircle){
     const t=distance/semicircle;
-    const theta=(90+180*t)*Math.PI/180;
-    return {x:xLeft+rx*Math.cos(theta),y:centerY+ry*Math.sin(theta)};
-  }
-  distance-=semicircle;
-
-  // Top straight: left -> right.
-  if(distance<=straight){
-    const t=distance/straight;
-    return {x:xLeft+(xRight-xLeft)*t,y:yTop};
-  }
-  distance-=straight;
-
-  // Right semicircle: top -> rightmost -> bottom.
-  if(distance<=semicircle){
-    const t=distance/semicircle;
-    const theta=(270+180*t)*Math.PI/180;
+    const theta=(90-180*t)*Math.PI/180;
     return {x:xRight+rx*Math.cos(theta),y:centerY+ry*Math.sin(theta)};
   }
   distance-=semicircle;
 
-  // Bottom-right curve exit -> finish in the middle.
+  // Top straight: right -> left.
+  if(distance<=straight){
+    const t=distance/straight;
+    return {x:xRight+(xLeft-xRight)*t,y:yTop};
+  }
+  distance-=straight;
+
+  // Left semicircle: top -> leftmost -> bottom.
+  if(distance<=semicircle){
+    const t=distance/semicircle;
+    const theta=(270-180*t)*Math.PI/180;
+    return {x:xLeft+rx*Math.cos(theta),y:centerY+ry*Math.sin(theta)};
+  }
+  distance-=semicircle;
+
+  // Bottom-left curve exit -> finish in the middle.
   const t=Math.min(1,distance/halfStraight);
-  return {x:xRight+(50-xRight)*t,y:yBottom};
+  return {x:xLeft+(50-xLeft)*t,y:yBottom};
 }
 
 function renderStadium(data){
@@ -266,4 +275,5 @@ function escapeHtml(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;'
 function launchConfetti(){ const layer=document.querySelector('#confettiLayer'); const palette=['#ffd65c','#62e89a','#60cfff','#ff78b8','#b89bff']; for(let i=0;i<70;i++){ const e=document.createElement('i'); e.className='confetti'; e.style.left=`${Math.random()*100}%`; e.style.background=palette[i%palette.length]; e.style.setProperty('--drift',`${(Math.random()-.5)*260}px`); e.style.animationDelay=`${Math.random()*.45}s`; layer.appendChild(e); setTimeout(()=>e.remove(),2600); } }
 
 document.querySelector('#fullscreenBtn').addEventListener('click',()=>{ if(!document.fullscreenElement) document.documentElement.requestFullscreen?.(); else document.exitFullscreen?.(); });
+installStadiumTweaks();
 fetchData(); setInterval(fetchData,POLL_MS);
