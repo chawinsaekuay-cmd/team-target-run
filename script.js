@@ -97,12 +97,64 @@ function renderPodium(data){
   }).join('');
 }
 
-function ovalPosition(progress){
-  const p=Math.max(0,Math.min(100,Number(progress)||0));
-  const theta=(90 + p*3.6) * Math.PI / 180;
-  const x=50 + 43*Math.cos(theta);
-  const y=50 + 35*Math.sin(theta);
-  return {x,y};
+// Position a runner on a proper stadium/athletics-track shape:
+// two long straights connected by semicircular ends, rather than an ellipse.
+function stadiumPosition(progress){
+  const p=Math.max(0,Math.min(100,Number(progress)||0))/100;
+
+  // Coordinates are percentages inside the track element.
+  // The physical track is ~1.92:1, so horizontal distances are weighted accordingly.
+  const xLeft=20;
+  const xRight=80;
+  const yTop=10;
+  const yBottom=90;
+  const centerY=50;
+  const rx=20;
+  const ry=40;
+  const aspect=1.92;
+
+  const straight=(xRight-xLeft)/100*aspect;
+  const radius=ry/100;
+  const semicircle=Math.PI*radius;
+  const total=2*straight+2*semicircle;
+  let distance=p*total;
+
+  // Start/finish is at the middle of the bottom straight.
+  const halfStraight=straight/2;
+
+  // Bottom middle -> bottom-left curve entrance.
+  if(distance<=halfStraight){
+    const t=distance/halfStraight;
+    return {x:50+(xLeft-50)*t,y:yBottom};
+  }
+  distance-=halfStraight;
+
+  // Left semicircle: bottom -> leftmost -> top.
+  if(distance<=semicircle){
+    const t=distance/semicircle;
+    const theta=(90+180*t)*Math.PI/180;
+    return {x:xLeft+rx*Math.cos(theta),y:centerY+ry*Math.sin(theta)};
+  }
+  distance-=semicircle;
+
+  // Top straight: left -> right.
+  if(distance<=straight){
+    const t=distance/straight;
+    return {x:xLeft+(xRight-xLeft)*t,y:yTop};
+  }
+  distance-=straight;
+
+  // Right semicircle: top -> rightmost -> bottom.
+  if(distance<=semicircle){
+    const t=distance/semicircle;
+    const theta=(270+180*t)*Math.PI/180;
+    return {x:xRight+rx*Math.cos(theta),y:centerY+ry*Math.sin(theta)};
+  }
+  distance-=semicircle;
+
+  // Bottom-right curve exit -> finish in the middle.
+  const t=Math.min(1,distance/halfStraight);
+  return {x:xRight+(50-xRight)*t,y:yBottom};
 }
 
 function renderStadium(data){
@@ -113,7 +165,7 @@ function renderStadium(data){
   container.innerHTML=data.runners.map((r,i)=>{
     const color=colors[i%colors.length];
     const capped=Math.min(100,r.achievement);
-    const pos=ovalPosition(capped);
+    const pos=stadiumPosition(capped);
     const finished=Boolean(r.finishPlace);
     const finishIndex=finished ? finishers.findIndex(f=>f.name===r.name) : -1;
     const finishOffset=finished ? ((finishIndex%5)-2)*24 : ((i%3)-1)*7;
