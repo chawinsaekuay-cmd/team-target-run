@@ -1,5 +1,5 @@
 // Paste the deployed Google Apps Script Web App URL here.
-const API_URL = "";
+const API_URL = "https://script.google.com/macros/s/AKfycby_A9iKIrfCa22aDZLXlKk7CWz4hsiGOx5ufFREVPRWQ8ds_xfi772D-SDfT6QidYdGvA/exec";
 const POLL_MS = 10000;
 
 const FALLBACK_DATA = {
