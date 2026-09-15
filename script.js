@@ -31,8 +31,19 @@ function pct(v){ return `${Number(v || 0).toFixed(2)}%`; }
 function medal(rank){ return rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':String(rank); }
 
 function normalize(payload){
-  const runners = (payload.runners || []).map(r => ({...r, achievement:Number(r.achievement)||0}));
-  runners.sort((a,b)=>b.achievement-a.achievement || b.revenue-a.revenue);
+  const runners = (payload.runners || []).map(r => ({
+    ...r,
+    achievement:Number(r.achievement)||0,
+    finishPlace:Number(r.finishPlace)||0,
+    finishDays:Number(r.finishDays)||0
+  }));
+
+  runners.sort((a,b)=>{
+    if(a.finishPlace && b.finishPlace) return a.finishPlace-b.finishPlace;
+    if(a.finishPlace) return -1;
+    if(b.finishPlace) return 1;
+    return b.achievement-a.achievement || b.revenue-a.revenue;
+  });
   runners.forEach((r,i)=>r.rank=i+1);
   return {...payload,runners};
 }
@@ -51,6 +62,13 @@ function renderKpis(data){
   ].map(([label,value])=>`<div class="kpi"><div class="kpi-label">${label}</div><div class="kpi-value">${value}</div></div>`).join('');
 }
 
+function finishBadge(r){
+  if(!r.finishPlace) return '';
+  const place = r.finishPlace<=3 ? medal(r.finishPlace) : '✅';
+  const days = r.finishDays ? ` · ${r.finishDays} day${r.finishDays===1?'':'s'}` : '';
+  return `<span class="finish-badge">${place} FINISHED${days}</span>`;
+}
+
 function renderRace(data){
   const board=document.querySelector('#raceBoard');
   const oldRects=new Map([...board.children].map(el=>[el.dataset.name,el.getBoundingClientRect()]));
@@ -59,10 +77,11 @@ function renderRace(data){
     const color=colors[i%colors.length];
     const progress=Math.max(0,Math.min(100,r.achievement));
     const winner=r.achievement>=100;
+    const rankDisplay = r.finishPlace ? medal(r.finishPlace) : String(r.rank);
     const meta=`${r.level} · ฿${money(r.revenue)} / ฿${money(r.targetRevenue)}`;
     return `<div class="runner-row" data-name="${escapeHtml(r.name)}" style="--runner:${color}">
-      <div class="rank ${r.rank<=3?'medal':''}">${medal(r.rank)}</div>
-      <div class="identity"><div class="name">${escapeHtml(r.name)}</div><div class="meta">${escapeHtml(meta)}</div></div>
+      <div class="rank ${r.finishPlace && r.finishPlace<=3?'medal':''}">${rankDisplay}</div>
+      <div class="identity"><div class="name">${escapeHtml(r.name)}</div><div class="meta">${escapeHtml(meta)}</div>${finishBadge(r)}</div>
       <div class="track"><div class="progress" style="width:${progress}%"></div><div class="runner-marker ${winner?'winner':''}" style="left:${progress}%"><span class="runner-icon">🏃</span><span class="nameplate">${escapeHtml(r.name)}</span>${winner?'<span class="trophy">🏆</span>':''}</div></div>
       <div class="achievement">${pct(r.achievement)}</div>
     </div>`;
@@ -89,7 +108,7 @@ function render(data){
   document.querySelector('#lastUpdated').textContent=`Last updated: ${d.toLocaleTimeString('en-GB',{hour12:false})}`;
   const monthLabel = data.monthLabel || data.sourceTab || 'Current Month';
   const eyebrow = document.querySelector('#monthEyebrow');
-  if (eyebrow) eyebrow.textContent = `TEAM CHAWIN · ${String(monthLabel).toUpperCase()}`;
+  if (eyebrow) eyebrow.textContent = `${String(monthLabel).toUpperCase()} · FIRST TO 100% WINS`;
 }
 
 async function fetchData(){
