@@ -54,13 +54,12 @@ h1 span { color:#ffd65c; text-shadow: 0 0 26px rgba(255,214,92,.24); }
 .track::before { content:""; position:absolute; inset:0; border-radius:inherit; background: repeating-linear-gradient(90deg, transparent 0, transparent calc(25% - 1px), rgba(255,255,255,.16) calc(25% - 1px), rgba(255,255,255,.16) 25%); pointer-events:none; }
 .track::after { content:""; position:absolute; top:3px; bottom:3px; right:0; width:13px; border-radius:3px; background: conic-gradient(#fff 25%,#111 0 50%,#fff 0 75%,#111 0) 0 0 / 8px 8px; box-shadow:0 0 16px rgba(255,255,255,.15); }
 .progress { position:absolute; left:0; top:0; bottom:0; width:0; border-radius:14px; background: linear-gradient(90deg, color-mix(in srgb, var(--runner) 50%, transparent), color-mix(in srgb, var(--runner) 15%, transparent)); transition:width 1s cubic-bezier(.18,.8,.22,1); }
+.finished-track .progress { width:100% !important; }
 .runner-marker { position:absolute; top:50%; left:0; transform:translate(-50%,-50%); display:flex; align-items:center; gap:7px; transition:left 1s cubic-bezier(.18,.8,.22,1); z-index:3; }
-.runner-marker.winner { left:103% !important; }
 .runner-icon { font-size:21px; filter: drop-shadow(0 3px 5px rgba(0,0,0,.45)); }
 .nameplate { max-width:122px; padding:7px 10px; border-radius:999px; background:var(--runner); color:#06101d; font-size:12px; font-weight:900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; box-shadow:0 8px 18px color-mix(in srgb, var(--runner) 25%, transparent); }
-.winner .nameplate { box-shadow:0 0 0 2px #fff8, 0 0 26px color-mix(in srgb, var(--runner) 55%, transparent); }
-.trophy { font-size:20px; animation:floaty 1.8s ease-in-out infinite; }
-@keyframes floaty { 50% { transform:translateY(-4px) rotate(4deg); } }
+.place-banner { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); z-index:4; padding:7px 14px; border-radius:999px; background:rgba(6,16,29,.82); border:1px solid rgba(255,255,255,.20); color:#fff; font-size:13px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; box-shadow:0 8px 22px rgba(0,0,0,.30), 0 0 24px color-mix(in srgb, var(--runner) 22%, transparent); white-space:nowrap; }
+.finished-track .place-banner { color:#ffd65c; border-color:rgba(255,214,92,.35); }
 .achievement { text-align:right; font-size:16px; font-weight:900; color:var(--runner); }
 
 .sales-card { margin-top:18px; padding:22px; }
@@ -92,6 +91,7 @@ h1 span { color:#ffd65c; text-shadow: 0 0 26px rgba(255,214,92,.24); }
   .runner-row { grid-template-columns:42px 106px minmax(0,1fr) 68px; gap:6px; }
   .scale-row { margin-left:164px; margin-right:78px; }
   .nameplate { max-width:92px; padding:6px 8px; font-size:10px; }
+  .place-banner { font-size:10px; padding:6px 10px; }
   .achievement { font-size:13px; }
   .sales-card { padding:16px; }
 }
