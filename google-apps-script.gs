@@ -105,28 +105,43 @@ function syncFinishLog_(ss, sourceTab, parsed, runners) {
       maxPlace = Math.max(maxPlace, place);
     });
 
-    // Historical correction for September 2026: Beam crossed 100% first, then Gorn.
-    // This only fixes their finishing places; finish date/day remains whatever is already logged.
-    const manualOrder = sourceTab === 'TPSep2026' ? { beam: 1, gorn: 2 } : {};
+    // Historical correction for September 2026.
+    // User-confirmed finish order/dates: Beam on 9 Sep, Gorn on 13 Sep.
+    const manualFinish = sourceTab === 'TPSep2026' ? {
+      beam: { place: 1, finishDate: '9 Sep 2026', daysToFinish: 9, iso: '2026-09-09T12:00:00+07:00' },
+      gorn: { place: 2, finishDate: '13 Sep 2026', daysToFinish: 13, iso: '2026-09-13T12:00:00+07:00' }
+    } : {};
+
     runners.forEach(r => {
-      const wantedPlace = manualOrder[String(r.name || '').trim().toLowerCase()];
-      if (!wantedPlace) return;
+      const override = manualFinish[String(r.name || '').trim().toLowerCase()];
+      if (!override) return;
       const key = raceKey_(r);
-      if (current[key] && current[key].place !== wantedPlace) {
-        current[key].place = wantedPlace;
-        const rowNumber = rowIndexByKey[key];
-        if (rowNumber) log.getRange(rowNumber, 2).setValue(wantedPlace);
+      const rowNumber = rowIndexByKey[key];
+
+      if (current[key]) {
+        current[key].place = override.place;
+        current[key].finishedAt = override.iso;
+        current[key].finishDate = override.finishDate;
+        current[key].daysToFinish = override.daysToFinish;
+        if (rowNumber) {
+          log.getRange(rowNumber, 2, 1, 6).setValues([[
+            override.place,
+            r.name,
+            r.staffCode,
+            new Date(override.iso),
+            override.finishDate,
+            override.daysToFinish
+          ]]);
+        }
       }
-      maxPlace = Math.max(maxPlace, wantedPlace);
+      maxPlace = Math.max(maxPlace, override.place);
     });
 
-    // If several people are already over 100% the first time this version runs,
-    // historical manual order is respected first; otherwise current leaderboard order is used.
     const newFinishers = runners
       .filter(r => r.achievement >= 100 && !current[raceKey_(r)])
       .sort((a,b) => {
-        const ao = manualOrder[String(a.name || '').trim().toLowerCase()] || 9999;
-        const bo = manualOrder[String(b.name || '').trim().toLowerCase()] || 9999;
+        const ao = (manualFinish[String(a.name || '').trim().toLowerCase()] || {}).place || 9999;
+        const bo = (manualFinish[String(b.name || '').trim().toLowerCase()] || {}).place || 9999;
         if (ao !== bo) return ao - bo;
         return b.achievement - a.achievement || b.revenue - a.revenue;
       });
@@ -137,25 +152,27 @@ function syncFinishLog_(ss, sourceTab, parsed, runners) {
     const newRows = [];
 
     newFinishers.forEach(r => {
-      const manualPlace = manualOrder[String(r.name || '').trim().toLowerCase()] || 0;
-      const place = manualPlace || (maxPlace + 1);
+      const override = manualFinish[String(r.name || '').trim().toLowerCase()];
+      const place = override ? override.place : (maxPlace + 1);
       maxPlace = Math.max(maxPlace, place);
-      const finishDate = Utilities.formatDate(now, tz, 'd MMM yyyy');
+      const finishedAt = override ? new Date(override.iso) : now;
+      const finishDate = override ? override.finishDate : Utilities.formatDate(now, tz, 'd MMM yyyy');
+      const finishDays = override ? override.daysToFinish : daysToFinish;
       const key = raceKey_(r);
       current[key] = {
         place,
-        finishedAt: now.toISOString(),
+        finishedAt: finishedAt.toISOString(),
         finishDate,
-        daysToFinish: Number(daysToFinish) || 0
+        daysToFinish: Number(finishDays) || 0
       };
       newRows.push([
         sourceTab,
         place,
         r.name,
         r.staffCode,
-        now,
+        finishedAt,
         finishDate,
-        daysToFinish,
+        finishDays,
         r.achievement
       ]);
     });
