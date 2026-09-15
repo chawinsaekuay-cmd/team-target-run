@@ -13,7 +13,7 @@
   <main class="app-shell">
     <header class="topbar">
       <section>
-        <div id="monthEyebrow" class="eyebrow">TEAM CHAWIN · CURRENT MONTH</div>
+        <div id="monthEyebrow" class="eyebrow">CURRENT MONTH · FIRST TO 100% WINS</div>
         <h1>ตี๋ <span>UNIVERSE</span></h1>
         <p class="subtitle">Same goal · further together</p>
       </section>
@@ -46,6 +46,33 @@
       </div>
 
       <div id="raceBoard" class="race-board"></div>
+    </section>
+
+    <section class="sales-card">
+      <div class="sales-head">
+        <div>
+          <div class="sales-title">🏆 Live Top Sales Board</div>
+          <div class="sales-note">Ranked by revenue · live monthly stats</div>
+        </div>
+        <div class="sales-live"><span class="live-dot"></span> LIVE DATA</div>
+      </div>
+
+      <div class="sales-table-wrap">
+        <table class="sales-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Sales</th>
+              <th>Level</th>
+              <th>Revenue</th>
+              <th>Deals</th>
+              <th>Avg / Deal</th>
+              <th>Target %</th>
+            </tr>
+          </thead>
+          <tbody id="salesBoard"></tbody>
+        </table>
+      </div>
     </section>
   </main>
 
