@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Monthly Target Run</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <section>
+        <div class="eyebrow">TEAM CHAWIN · SEPTEMBER 2026</div>
+        <h1>MONTHLY TARGET <span>RUN</span></h1>
+        <p class="subtitle">Same goal · further together</p>
+      </section>
+      <section class="top-actions">
+        <div id="liveStatus" class="status-pill"><span class="live-dot"></span> LIVE</div>
+        <button id="fullscreenBtn" class="icon-btn" aria-label="Fullscreen">⛶</button>
+      </section>
+    </header>
+
+    <section id="kpiGrid" class="kpi-grid"></section>
+
+    <section class="race-card">
+      <div class="race-head">
+        <div>
+          <div class="race-title">🏁 Team Race</div>
+          <div class="race-note">Revenue achievement vs monthly target</div>
+        </div>
+        <div class="updated-wrap">
+          <span id="warning" class="warning hidden">Live data temporarily unavailable</span>
+          <span id="lastUpdated">Last updated: —</span>
+        </div>
+      </div>
+
+      <div class="scale-row" aria-hidden="true">
+        <span style="left:0%">0%</span>
+        <span style="left:25%">25%</span>
+        <span style="left:50%">50%</span>
+        <span style="left:75%">75%</span>
+        <span class="finish-label" style="left:100%">100%</span>
+      </div>
+
+      <div id="raceBoard" class="race-board"></div>
+    </section>
+  </main>
+
+  <div id="confettiLayer" class="confetti-layer" aria-hidden="true"></div>
+  <script src="script.js"></script>
+</body>
+</html>
