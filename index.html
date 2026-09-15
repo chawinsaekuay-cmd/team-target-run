@@ -17,27 +17,24 @@
       max-height:540px;
       overflow-y:auto;
       padding-right:8px;
-      scrollbar-width:thin;
-      scrollbar-color:rgba(255,255,255,.24) transparent;
     }
-    .mini-race-board::-webkit-scrollbar { width:7px; }
-    .mini-race-board::-webkit-scrollbar-thumb { background:rgba(255,255,255,.24); border-radius:999px; }
 
-    /* Keep the 500 Race scrollbar visually out of the stat bars. */
+    /* Keep the 500 Race scrollers usable but visually blended into the panel. */
     .mini-race-card #miniRaceBoard {
-      padding-right:34px !important;
-      margin-right:8px !important;
-      scrollbar-width:thin !important;
-      scrollbar-color:#0d1727 #0d1727 !important;
+      padding-right:40px !important;
+      margin-right:10px !important;
+      scrollbar-width:none !important;
+      -ms-overflow-style:none;
     }
-    .mini-race-card #miniRaceBoard::-webkit-scrollbar { width:8px; }
-    .mini-race-card #miniRaceBoard::-webkit-scrollbar-track {
-      background:#0d1727 !important;
-      border-radius:999px;
+    .mini-race-card #miniRaceBoard::-webkit-scrollbar {
+      width:0 !important;
+      height:0 !important;
+      background:transparent !important;
     }
+    .mini-race-card #miniRaceBoard::-webkit-scrollbar-track,
     .mini-race-card #miniRaceBoard::-webkit-scrollbar-thumb {
-      background:#0d1727 !important;
-      border-radius:999px;
+      background:transparent !important;
+      border:0 !important;
     }
 
     .mini-runner-top { margin-bottom:6px !important; }
@@ -50,7 +47,24 @@
       gap:8px !important;
       font-size:14px !important;
     }
-    .finish-history { max-height:190px; overflow-y:auto; padding-right:5px; }
+    .finish-history {
+      max-height:190px;
+      overflow-y:auto;
+      padding-right:34px !important;
+      margin-right:8px;
+      scrollbar-width:none !important;
+      -ms-overflow-style:none;
+    }
+    .finish-history::-webkit-scrollbar {
+      width:0 !important;
+      height:0 !important;
+      background:transparent !important;
+    }
+    .finish-history::-webkit-scrollbar-track,
+    .finish-history::-webkit-scrollbar-thumb {
+      background:transparent !important;
+      border:0 !important;
+    }
 
     /* Larger Live Top Sales Board */
     .sales-title { font-size:26px !important; }
