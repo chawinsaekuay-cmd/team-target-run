@@ -44,8 +44,10 @@ function installStadiumTweaks(){
   const style=document.createElement('style');
   style.id='stadiumTweaks';
   style.textContent=`
-    .stadium-runner{flex-direction:column-reverse !important;align-items:center !important;gap:2px !important;}
-    .stadium-nameplate{transform:translateY(-2px);}
+    .stadium-runner{flex-direction:column-reverse !important;align-items:center !important;gap:2px !important;pointer-events:auto !important;cursor:default;}
+    .stadium-nameplate{transform:translateY(-2px);transition:transform .16s ease,filter .16s ease,box-shadow .16s ease;}
+    .stadium-runner:hover{z-index:999 !important;}
+    .stadium-runner:hover .stadium-nameplate{transform:translateY(-2px) scale(1.05);filter:brightness(1.08);box-shadow:0 14px 34px rgba(0,0,0,.55),0 0 0 2px rgba(255,255,255,.45) !important;}
     .finish-line{width:60px !important;}
 
     .checkpoint{
