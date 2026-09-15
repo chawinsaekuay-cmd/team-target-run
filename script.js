@@ -209,7 +209,7 @@ function renderSalesPodium(data){
     const r=byPlace.get(place);
     const cls=place===1?'first':place===2?'second':'third';
     const name=r?escapeHtml(r.name):'—';
-    const detail=r?`฿${money(r.revenue)} · ${pct(r.achievement)}`:'Waiting for sales';
+    const detail=r?`฿${money(r.revenue)}`:'Waiting for sales';
     return `<div class="podium-slot ${cls}">
       <div class="podium-person">
         <div class="podium-medal">${medal(place)}</div>
