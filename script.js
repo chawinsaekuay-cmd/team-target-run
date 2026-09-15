@@ -4,6 +4,7 @@ const POLL_MS = 10000;
 
 const FALLBACK_DATA = {
   updatedAt: new Date().toISOString(),
+  monthLabel: 'September 2026',
   runners: [
     {name:"Gorn",level:"R[1]N",deals:3,targetRevenue:37000,revenue:52000,achievement:140.54},
     {name:"Beam",level:"R3",deals:3,targetRevenue:90000,revenue:124500,achievement:138.33},
@@ -86,6 +87,9 @@ function render(data){
   renderKpis(data); renderRace(data);
   const d=new Date(data.updatedAt || Date.now());
   document.querySelector('#lastUpdated').textContent=`Last updated: ${d.toLocaleTimeString('en-GB',{hour12:false})}`;
+  const monthLabel = data.monthLabel || data.sourceTab || 'Current Month';
+  const eyebrow = document.querySelector('#monthEyebrow');
+  if (eyebrow) eyebrow.textContent = `TEAM CHAWIN · ${String(monthLabel).toUpperCase()}`;
 }
 
 async function fetchData(){
