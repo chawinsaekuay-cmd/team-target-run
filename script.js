@@ -6,8 +6,8 @@ const FALLBACK_DATA = {
   updatedAt: new Date().toISOString(),
   monthLabel: 'September 2026',
   runners: [
-    {name:"Gorn",level:"R[1]N",deals:3,targetRevenue:37000,revenue:52000,achievement:140.54},
-    {name:"Beam",level:"R3",deals:3,targetRevenue:90000,revenue:124500,achievement:138.33},
+    {name:"Beam",level:"R3",deals:3,targetRevenue:90000,revenue:124500,achievement:138.33,finishPlace:1,finishDays:9},
+    {name:"Gorn",level:"R[1]N",deals:3,targetRevenue:37000,revenue:52000,achievement:140.54,finishPlace:2,finishDays:13},
     {name:"Ping",level:"R[1]N",deals:2,targetRevenue:37000,revenue:31000,achievement:83.78},
     {name:"Kwan",level:"R[1]N",deals:1,targetRevenue:37000,revenue:30000,achievement:81.08},
     {name:"Nat",level:"R3",deals:5,targetRevenue:90000,revenue:65750,achievement:73.06},
@@ -23,7 +23,7 @@ const FALLBACK_DATA = {
   ]
 };
 
-const colors = ["#ffd65c","#9be8ff","#7ee29a","#a99cff","#ff8fbe","#ffb66e","#5bd6ce","#ff8181","#a8dd6e","#7cb7ff","#f9db79","#c5a4ff","#8ed7bc","#c7d0de"];
+const colors = ["#ffd65c","#9be8ff","#7ee29a","#a99cff","#ff8fbe","#ffb66e","#5bd6ce","#ff8181","#a8dd6e","#7cb7ff","#f9db79","#c5a4ff","#8ed7bc","#c7d0de","#ff9d76","#65e4ff","#f4a8ff","#a4f27a"];
 const state = { previousAchievements: new Map(), lastGood: null, initialized: false };
 
 function money(v){ return new Intl.NumberFormat('en-US',{maximumFractionDigits:0}).format(v || 0); }
@@ -74,47 +74,85 @@ function renderKpis(data){
   ].map(([label,value])=>`<div class="kpi"><div class="kpi-label">${label}</div><div class="kpi-value">${value}</div></div>`).join('');
 }
 
-function finishBadge(r){
-  if(!r.finishPlace) return '';
-  const place = r.finishPlace<=3 ? medal(r.finishPlace) : '✅';
-  const days = r.finishDays ? ` · ${r.finishDays} day${r.finishDays===1?'':'s'}` : '';
-  return `<span class="finish-badge">${place} FINISHED${days}</span>`;
-}
+function renderPodium(data){
+  const podium=document.querySelector('#podium');
+  if(!podium) return;
+  const finishers=[...data.runners].filter(r=>r.finishPlace>0).sort((a,b)=>a.finishPlace-b.finishPlace);
+  const byPlace=new Map(finishers.map(r=>[r.finishPlace,r]));
+  const order=[2,1,3];
 
-function renderRace(data){
-  const board=document.querySelector('#raceBoard');
-  const oldRects=new Map([...board.children].map(el=>[el.dataset.name,el.getBoundingClientRect()]));
-
-  board.innerHTML=data.runners.map((r,i)=>{
-    const color=colors[i%colors.length];
-    const progress=Math.max(0,Math.min(100,r.achievement));
-    const finished=Boolean(r.finishPlace);
-    const rankDisplay = finished ? medal(r.finishPlace) : String(r.rank);
-    const meta=`${r.level} · ฿${money(r.revenue)} / ฿${money(r.targetRevenue)}`;
-    const marker = finished
-      ? `<div class="place-banner">${ordinal(r.finishPlace)} PLACE</div>`
-      : `<div class="runner-marker" style="left:${progress}%"><span class="runner-icon">🏃</span><span class="nameplate">${escapeHtml(r.name)}</span></div>`;
-    const racePct = Math.min(100, r.achievement);
-    return `<div class="runner-row" data-name="${escapeHtml(r.name)}" style="--runner:${color}">
-      <div class="rank ${finished && r.finishPlace<=3?'medal':''}">${rankDisplay}</div>
-      <div class="identity"><div class="name">${escapeHtml(r.name)}</div><div class="meta">${escapeHtml(meta)}</div>${finishBadge(r)}</div>
-      <div class="track ${finished?'finished-track':''}"><div class="progress" style="width:${progress}%"></div>${marker}</div>
-      <div class="achievement">${pct(racePct)}</div>
+  podium.innerHTML=order.map(place=>{
+    const r=byPlace.get(place);
+    const cls=place===1?'first':place===2?'second':'third';
+    const name=r?escapeHtml(r.name):'—';
+    const days=r&&r.finishDays?`${r.finishDays} day${r.finishDays===1?'':'s'} to finish`:'Waiting for finisher';
+    return `<div class="podium-slot ${cls}">
+      <div class="podium-person">
+        <div class="podium-medal">${medal(place)}</div>
+        <div class="podium-name">${name}</div>
+        <div class="podium-days">${days}</div>
+      </div>
+      <div class="podium-block"><span>${place}</span><small>${ordinal(place)} PLACE</small></div>
     </div>`;
   }).join('');
+}
 
-  [...board.children].forEach(el=>{
-    const old=oldRects.get(el.dataset.name); if(!old) return;
-    const now=el.getBoundingClientRect(); const dy=old.top-now.top;
-    if(Math.abs(dy)>1){ el.style.transition='none'; el.style.transform=`translateY(${dy}px)`; requestAnimationFrame(()=>{requestAnimationFrame(()=>{el.style.transition='transform .65s cubic-bezier(.2,.8,.2,1), opacity .3s'; el.style.transform='';});}); }
-  });
+function ovalPosition(progress){
+  const p=Math.max(0,Math.min(100,Number(progress)||0));
+  const theta=(90 + p*3.6) * Math.PI / 180;
+  const x=50 + 43*Math.cos(theta);
+  const y=50 + 35*Math.sin(theta);
+  return {x,y};
+}
 
-  data.runners.forEach(r=>{
-    const prev=state.previousAchievements.get(r.name);
-    if(state.initialized && prev != null && prev < 100 && r.achievement >= 100) launchConfetti();
-    state.previousAchievements.set(r.name,r.achievement);
-  });
-  state.initialized=true;
+function renderStadium(data){
+  const container=document.querySelector('#stadiumRunners');
+  if(!container) return;
+  const finishers=data.runners.filter(r=>r.finishPlace>0);
+
+  container.innerHTML=data.runners.map((r,i)=>{
+    const color=colors[i%colors.length];
+    const capped=Math.min(100,r.achievement);
+    const pos=ovalPosition(capped);
+    const finished=Boolean(r.finishPlace);
+    const finishIndex=finished ? finishers.findIndex(f=>f.name===r.name) : -1;
+    const finishOffset=finished ? ((finishIndex%5)-2)*24 : ((i%3)-1)*7;
+    const label=finished ? `${ordinal(r.finishPlace)} · ${escapeHtml(r.name)}` : escapeHtml(r.name);
+    const status=finished ? `${r.finishDays || ''}${r.finishDays?'d':''}` : `${Math.round(capped)}%`;
+    return `<div class="stadium-runner ${finished?'finished':''}" style="left:${pos.x}%;top:${pos.y}%;--runner:${color};--offset:${finishOffset}px" title="${escapeHtml(r.name)} · ${pct(r.achievement)}">
+      <div class="stadium-runner-icon">🏃</div>
+      <div class="stadium-nameplate"><strong>${label}</strong><span>${status}</span></div>
+    </div>`;
+  }).join('');
+}
+
+function renderMiniRace(data){
+  const board=document.querySelector('#miniRaceBoard');
+  if(!board) return;
+  board.innerHTML=data.runners.map((r,i)=>{
+    const color=colors[i%colors.length];
+    const capped=Math.max(0,Math.min(100,r.achievement));
+    const result=r.finishPlace ? ordinal(r.finishPlace) : `${Math.round(capped)}%`;
+    return `<div class="mini-runner" style="--runner:${color}">
+      <div class="mini-runner-top"><span class="mini-name">${escapeHtml(r.name)}</span><span class="mini-result">${result}</span></div>
+      <div class="mini-track"><div class="mini-progress" style="width:${capped}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function renderFinishHistory(data){
+  const box=document.querySelector('#finishHistory');
+  if(!box) return;
+  const finishers=[...data.runners].filter(r=>r.finishPlace>0).sort((a,b)=>a.finishPlace-b.finishPlace);
+  if(!finishers.length){
+    box.innerHTML='<div class="finish-empty">No finishers yet</div>';
+    return;
+  }
+  box.innerHTML=finishers.map(r=>`<div class="finish-history-row">
+    <span class="finish-place">${ordinal(r.finishPlace)}</span>
+    <strong>${escapeHtml(r.name)}</strong>
+    <span>${r.finishDays?`${r.finishDays}d`:''}</span>
+  </div>`).join('');
 }
 
 function renderSalesBoard(data){
@@ -141,12 +179,25 @@ function renderSalesBoard(data){
 
 function render(data){
   data=normalize(data); state.lastGood=data;
-  renderKpis(data); renderRace(data); renderSalesBoard(data);
+  renderKpis(data);
+  renderPodium(data);
+  renderStadium(data);
+  renderMiniRace(data);
+  renderFinishHistory(data);
+  renderSalesBoard(data);
+
   const d=new Date(data.updatedAt || Date.now());
   document.querySelector('#lastUpdated').textContent=`Last updated: ${d.toLocaleTimeString('en-GB',{hour12:false})}`;
   const monthLabel = data.monthLabel || data.sourceTab || 'Current Month';
   const eyebrow = document.querySelector('#monthEyebrow');
   if (eyebrow) eyebrow.textContent = `${String(monthLabel).toUpperCase()} · FIRST TO 100% WINS`;
+
+  data.runners.forEach(r=>{
+    const prev=state.previousAchievements.get(r.name);
+    if(state.initialized && prev != null && prev < 100 && r.achievement >= 100) launchConfetti();
+    state.previousAchievements.set(r.name,r.achievement);
+  });
+  state.initialized=true;
 }
 
 async function fetchData(){
@@ -159,7 +210,7 @@ async function fetchData(){
   }catch(err){ console.error(err); warning.classList.remove('hidden'); warning.textContent='Live data temporarily unavailable'; if(!state.lastGood) render(FALLBACK_DATA); }
 }
 
-function escapeHtml(s){ return String(s??'').replace(/[&<>'\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','\"':'&quot;'}[c])); }
+function escapeHtml(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])); }
 function launchConfetti(){ const layer=document.querySelector('#confettiLayer'); const palette=['#ffd65c','#62e89a','#60cfff','#ff78b8','#b89bff']; for(let i=0;i<70;i++){ const e=document.createElement('i'); e.className='confetti'; e.style.left=`${Math.random()*100}%`; e.style.background=palette[i%palette.length]; e.style.setProperty('--drift',`${(Math.random()-.5)*260}px`); e.style.animationDelay=`${Math.random()*.45}s`; layer.appendChild(e); setTimeout(()=>e.remove(),2600); } }
 
 document.querySelector('#fullscreenBtn').addEventListener('click',()=>{ if(!document.fullscreenElement) document.documentElement.requestFullscreen?.(); else document.exitFullscreen?.(); });
