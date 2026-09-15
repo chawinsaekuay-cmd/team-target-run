@@ -22,6 +22,24 @@
     }
     .mini-race-board::-webkit-scrollbar { width:7px; }
     .mini-race-board::-webkit-scrollbar-thumb { background:rgba(255,255,255,.24); border-radius:999px; }
+
+    /* Keep the 500 Race scrollbar visually out of the stat bars. */
+    .mini-race-card #miniRaceBoard {
+      padding-right:34px !important;
+      margin-right:8px !important;
+      scrollbar-width:thin !important;
+      scrollbar-color:#0d1727 #0d1727 !important;
+    }
+    .mini-race-card #miniRaceBoard::-webkit-scrollbar { width:8px; }
+    .mini-race-card #miniRaceBoard::-webkit-scrollbar-track {
+      background:#0d1727 !important;
+      border-radius:999px;
+    }
+    .mini-race-card #miniRaceBoard::-webkit-scrollbar-thumb {
+      background:#0d1727 !important;
+      border-radius:999px;
+    }
+
     .mini-runner-top { margin-bottom:6px !important; }
     .mini-name { font-size:16px !important; }
     .mini-result { font-size:15px !important; }
