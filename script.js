@@ -29,6 +29,15 @@ const state = { previousAchievements: new Map(), lastGood: null, initialized: fa
 function money(v){ return new Intl.NumberFormat('en-US',{maximumFractionDigits:0}).format(v || 0); }
 function pct(v){ return `${Number(v || 0).toFixed(2)}%`; }
 function medal(rank){ return rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':String(rank); }
+function ordinal(rank){
+  const n=Number(rank)||0;
+  const mod100=n%100;
+  if(mod100>=11 && mod100<=13) return `${n}th`;
+  if(n%10===1) return `${n}st`;
+  if(n%10===2) return `${n}nd`;
+  if(n%10===3) return `${n}rd`;
+  return `${n}th`;
+}
 
 function normalize(payload){
   const runners = (payload.runners || []).map(r => ({
@@ -79,14 +88,18 @@ function renderRace(data){
   board.innerHTML=data.runners.map((r,i)=>{
     const color=colors[i%colors.length];
     const progress=Math.max(0,Math.min(100,r.achievement));
-    const winner=r.achievement>=100;
-    const rankDisplay = r.finishPlace ? medal(r.finishPlace) : String(r.rank);
+    const finished=Boolean(r.finishPlace);
+    const rankDisplay = finished ? medal(r.finishPlace) : String(r.rank);
     const meta=`${r.level} · ฿${money(r.revenue)} / ฿${money(r.targetRevenue)}`;
+    const marker = finished
+      ? `<div class="place-banner">${ordinal(r.finishPlace)} PLACE</div>`
+      : `<div class="runner-marker" style="left:${progress}%"><span class="runner-icon">🏃</span><span class="nameplate">${escapeHtml(r.name)}</span></div>`;
+    const racePct = Math.min(100, r.achievement);
     return `<div class="runner-row" data-name="${escapeHtml(r.name)}" style="--runner:${color}">
-      <div class="rank ${r.finishPlace && r.finishPlace<=3?'medal':''}">${rankDisplay}</div>
+      <div class="rank ${finished && r.finishPlace<=3?'medal':''}">${rankDisplay}</div>
       <div class="identity"><div class="name">${escapeHtml(r.name)}</div><div class="meta">${escapeHtml(meta)}</div>${finishBadge(r)}</div>
-      <div class="track"><div class="progress" style="width:${progress}%"></div><div class="runner-marker ${winner?'winner':''}" style="left:${progress}%"><span class="runner-icon">🏃</span><span class="nameplate">${escapeHtml(r.name)}</span>${winner?'<span class="trophy">🏆</span>':''}</div></div>
-      <div class="achievement">${pct(r.achievement)}</div>
+      <div class="track ${finished?'finished-track':''}"><div class="progress" style="width:${progress}%"></div>${marker}</div>
+      <div class="achievement">${pct(racePct)}</div>
     </div>`;
   }).join('');
 
@@ -146,7 +159,7 @@ async function fetchData(){
   }catch(err){ console.error(err); warning.classList.remove('hidden'); warning.textContent='Live data temporarily unavailable'; if(!state.lastGood) render(FALLBACK_DATA); }
 }
 
-function escapeHtml(s){ return String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[c])); }
+function escapeHtml(s){ return String(s??'').replace(/[&<>'\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','\"':'&quot;'}[c])); }
 function launchConfetti(){ const layer=document.querySelector('#confettiLayer'); const palette=['#ffd65c','#62e89a','#60cfff','#ff78b8','#b89bff']; for(let i=0;i<70;i++){ const e=document.createElement('i'); e.className='confetti'; e.style.left=`${Math.random()*100}%`; e.style.background=palette[i%palette.length]; e.style.setProperty('--drift',`${(Math.random()-.5)*260}px`); e.style.animationDelay=`${Math.random()*.45}s`; layer.appendChild(e); setTimeout(()=>e.remove(),2600); } }
 
 document.querySelector('#fullscreenBtn').addEventListener('click',()=>{ if(!document.fullscreenElement) document.documentElement.requestFullscreen?.(); else document.exitFullscreen?.(); });
