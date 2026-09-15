@@ -77,11 +77,65 @@ function installStadiumTweaks(){
     .mini-race-board::-webkit-scrollbar-track{background:rgba(255,255,255,.035);border-radius:999px;}
     .mini-race-board::-webkit-scrollbar-thumb{background:rgba(255,255,255,.20);border-radius:999px;}
 
+    .podium-grid{
+      display:grid;
+      grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+      gap:16px;
+      margin-bottom:16px;
+      align-items:stretch;
+    }
+    .podium-grid .podium-card{margin-bottom:0 !important;min-width:0;}
+    .sales-podium-card .podium{gap:14px !important;padding-left:10px !important;padding-right:10px !important;}
+    .sales-podium-card .podium-slot{width:min(190px,30%);}
+    .sales-podium-card .podium-medal{font-size:62px !important;}
+    .sales-podium-card .podium-name{font-size:36px !important;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .sales-podium-card .podium-slot.first .podium-name{font-size:40px !important;}
+    .sales-podium-card .podium-days{font-size:19px !important;white-space:nowrap;}
+    .sales-podium-card .podium-slot.winner .podium-person{animation:none !important;}
+    .sales-podium-card .podium-slot.winner::before,
+    .sales-podium-card .podium-slot.winner::after{display:none !important;content:none !important;}
+
+    @media (max-width:1100px){
+      .podium-grid{grid-template-columns:1fr;}
+      .sales-podium-card .podium-slot{width:min(210px,27vw);}
+      .sales-podium-card .podium-medal{font-size:72px !important;}
+      .sales-podium-card .podium-name{font-size:42px !important;}
+      .sales-podium-card .podium-slot.first .podium-name{font-size:46px !important;}
+      .sales-podium-card .podium-days{font-size:23px !important;}
+    }
+
     @media (max-width:900px){
       .checkpoint{font-size:18px !important;padding:6px 9px !important;}
+      .sales-podium-card .podium-medal{font-size:48px !important;}
+      .sales-podium-card .podium-name,
+      .sales-podium-card .podium-slot.first .podium-name{font-size:24px !important;}
+      .sales-podium-card .podium-days{font-size:14px !important;}
     }
   `;
   document.head.appendChild(style);
+}
+
+function installSalesPodium(){
+  if(document.querySelector('#salesPodium')) return;
+  const raceCard=document.querySelector('.podium-card');
+  if(!raceCard || !raceCard.parentNode) return;
+
+  const grid=document.createElement('section');
+  grid.className='podium-grid';
+  raceCard.parentNode.insertBefore(grid,raceCard);
+  grid.appendChild(raceCard);
+
+  const salesCard=document.createElement('section');
+  salesCard.className='podium-card sales-podium-card';
+  salesCard.innerHTML=`
+    <div class="section-heading">
+      <div>
+        <div class="section-title">💰 Top Sales Podium</div>
+        <div class="section-note">Current top 3 by revenue · changes live</div>
+      </div>
+    </div>
+    <div id="salesPodium" class="podium"></div>`;
+  grid.appendChild(salesCard);
 }
 
 function normalize(payload){
@@ -136,6 +190,31 @@ function renderPodium(data){
         <div class="podium-medal">${medal(place)}</div>
         <div class="podium-name">${name}</div>
         <div class="podium-days">${days}</div>
+      </div>
+      <div class="podium-block"><span>${place}</span><small>${ordinal(place)} PLACE</small></div>
+    </div>`;
+  }).join('');
+}
+
+function renderSalesPodium(data){
+  const podium=document.querySelector('#salesPodium');
+  if(!podium) return;
+  const ranked=[...data.runners]
+    .sort((a,b)=>b.revenue-a.revenue || b.deals-a.deals || a.name.localeCompare(b.name))
+    .slice(0,3);
+  const byPlace=new Map(ranked.map((r,i)=>[i+1,r]));
+  const order=[2,1,3];
+
+  podium.innerHTML=order.map(place=>{
+    const r=byPlace.get(place);
+    const cls=place===1?'first':place===2?'second':'third';
+    const name=r?escapeHtml(r.name):'—';
+    const detail=r?`฿${money(r.revenue)} · ${pct(r.achievement)}`:'Waiting for sales';
+    return `<div class="podium-slot ${cls}">
+      <div class="podium-person">
+        <div class="podium-medal">${medal(place)}</div>
+        <div class="podium-name">${name}</div>
+        <div class="podium-days">${detail}</div>
       </div>
       <div class="podium-block"><span>${place}</span><small>${ordinal(place)} PLACE</small></div>
     </div>`;
@@ -262,6 +341,7 @@ function render(data){
   data=normalize(data); state.lastGood=data;
   renderKpis(data);
   renderPodium(data);
+  renderSalesPodium(data);
   renderStadium(data);
   renderMiniRace(data);
   renderFinishHistory(data);
@@ -296,4 +376,5 @@ function launchConfetti(){ const layer=document.querySelector('#confettiLayer');
 
 document.querySelector('#fullscreenBtn').addEventListener('click',()=>{ if(!document.fullscreenElement) document.documentElement.requestFullscreen?.(); else document.exitFullscreen?.(); });
 installStadiumTweaks();
+installSalesPodium();
 fetchData(); setInterval(fetchData,POLL_MS);
