@@ -88,9 +88,10 @@ function syncFinishLog_(ss, sourceTab, parsed, runners) {
     const lastRow = log.getLastRow();
     const rows = lastRow > 1 ? log.getRange(2, 1, lastRow - 1, 8).getValues() : [];
     const current = {};
+    const rowIndexByKey = {};
     let maxPlace = 0;
 
-    rows.forEach(row => {
+    rows.forEach((row, index) => {
       if (String(row[0]) !== sourceTab) return;
       const key = `${String(row[3] || '').trim()}|${String(row[2] || '').trim().toLowerCase()}`;
       const place = Number(row[1]) || 0;
@@ -100,14 +101,35 @@ function syncFinishLog_(ss, sourceTab, parsed, runners) {
         finishDate: String(row[5] || ''),
         daysToFinish: Number(row[6]) || 0
       };
+      rowIndexByKey[key] = index + 2;
       maxPlace = Math.max(maxPlace, place);
     });
 
+    // Historical correction for September 2026: Beam crossed 100% first, then Gorn.
+    // This only fixes their finishing places; finish date/day remains whatever is already logged.
+    const manualOrder = sourceTab === 'TPSep2026' ? { beam: 1, gorn: 2 } : {};
+    runners.forEach(r => {
+      const wantedPlace = manualOrder[String(r.name || '').trim().toLowerCase()];
+      if (!wantedPlace) return;
+      const key = raceKey_(r);
+      if (current[key] && current[key].place !== wantedPlace) {
+        current[key].place = wantedPlace;
+        const rowNumber = rowIndexByKey[key];
+        if (rowNumber) log.getRange(rowNumber, 2).setValue(wantedPlace);
+      }
+      maxPlace = Math.max(maxPlace, wantedPlace);
+    });
+
     // If several people are already over 100% the first time this version runs,
-    // they are registered in current leaderboard order. Future finishers are exact first-detected order.
+    // historical manual order is respected first; otherwise current leaderboard order is used.
     const newFinishers = runners
       .filter(r => r.achievement >= 100 && !current[raceKey_(r)])
-      .sort((a,b) => b.achievement - a.achievement || b.revenue - a.revenue);
+      .sort((a,b) => {
+        const ao = manualOrder[String(a.name || '').trim().toLowerCase()] || 9999;
+        const bo = manualOrder[String(b.name || '').trim().toLowerCase()] || 9999;
+        if (ao !== bo) return ao - bo;
+        return b.achievement - a.achievement || b.revenue - a.revenue;
+      });
 
     const now = new Date();
     const tz = ss.getSpreadsheetTimeZone() || Session.getScriptTimeZone() || 'Asia/Bangkok';
@@ -115,18 +137,20 @@ function syncFinishLog_(ss, sourceTab, parsed, runners) {
     const newRows = [];
 
     newFinishers.forEach(r => {
-      maxPlace += 1;
+      const manualPlace = manualOrder[String(r.name || '').trim().toLowerCase()] || 0;
+      const place = manualPlace || (maxPlace + 1);
+      maxPlace = Math.max(maxPlace, place);
       const finishDate = Utilities.formatDate(now, tz, 'd MMM yyyy');
       const key = raceKey_(r);
       current[key] = {
-        place: maxPlace,
+        place,
         finishedAt: now.toISOString(),
         finishDate,
         daysToFinish: Number(daysToFinish) || 0
       };
       newRows.push([
         sourceTab,
-        maxPlace,
+        place,
         r.name,
         r.staffCode,
         now,
