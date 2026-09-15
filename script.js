@@ -35,7 +35,10 @@ function normalize(payload){
     ...r,
     achievement:Number(r.achievement)||0,
     finishPlace:Number(r.finishPlace)||0,
-    finishDays:Number(r.finishDays)||0
+    finishDays:Number(r.finishDays)||0,
+    revenue:Number(r.revenue)||0,
+    deals:Number(r.deals)||0,
+    targetRevenue:Number(r.targetRevenue)||0
   }));
 
   runners.sort((a,b)=>{
@@ -50,9 +53,9 @@ function normalize(payload){
 
 function renderKpis(data){
   const rs=data.runners;
-  const totalRevenue=rs.reduce((s,r)=>s+(Number(r.revenue)||0),0);
-  const totalTarget=rs.reduce((s,r)=>s+(Number(r.targetRevenue)||0),0);
-  const totalDeals=rs.reduce((s,r)=>s+(Number(r.deals)||0),0);
+  const totalRevenue=rs.reduce((s,r)=>s+r.revenue,0);
+  const totalTarget=rs.reduce((s,r)=>s+r.targetRevenue,0);
+  const totalDeals=rs.reduce((s,r)=>s+r.deals,0);
   const avg=rs.length?rs.reduce((s,r)=>s+r.achievement,0)/rs.length:0;
   document.querySelector('#kpiGrid').innerHTML = [
     ['Team Revenue',`฿${money(totalRevenue)}`],
@@ -101,9 +104,33 @@ function renderRace(data){
   state.initialized=true;
 }
 
+function renderSalesBoard(data){
+  const tbody=document.querySelector('#salesBoard');
+  if(!tbody) return;
+
+  const ranked=[...data.runners]
+    .sort((a,b)=>b.revenue-a.revenue || b.deals-a.deals || a.name.localeCompare(b.name));
+
+  tbody.innerHTML=ranked.map((r,i)=>{
+    const rank=i+1;
+    const badge=rank<=3?medal(rank):String(rank);
+    const avgDeal=r.deals>0?r.revenue/r.deals:0;
+    const topClass=rank<=3?` top-${rank}`:'';
+    return `<tr class="sales-row${topClass}">
+      <td class="sales-rank">${badge}</td>
+      <td><div class="sales-name">${escapeHtml(r.name)}</div></td>
+      <td><span class="level-pill">${escapeHtml(r.level || '-')}</span></td>
+      <td class="sales-revenue">฿${money(r.revenue)}</td>
+      <td class="sales-deals">${money(r.deals)}</td>
+      <td>฿${money(avgDeal)}</td>
+      <td><span class="target-pill ${r.achievement>=100?'hit':''}">${pct(r.achievement)}</span></td>
+    </tr>`;
+  }).join('');
+}
+
 function render(data){
   data=normalize(data); state.lastGood=data;
-  renderKpis(data); renderRace(data);
+  renderKpis(data); renderRace(data); renderSalesBoard(data);
   const d=new Date(data.updatedAt || Date.now());
   document.querySelector('#lastUpdated').textContent=`Last updated: ${d.toLocaleTimeString('en-GB',{hour12:false})}`;
   const monthLabel = data.monthLabel || data.sourceTab || 'Current Month';
