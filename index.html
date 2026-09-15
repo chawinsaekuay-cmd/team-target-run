@@ -8,6 +8,67 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
+  <style>
+    /* Larger, easier-to-read 500 Race quick table */
+    .mini-race-title { font-size:24px !important; }
+    .mini-race-note { font-size:14px !important; }
+    .mini-race-board {
+      gap:12px !important;
+      max-height:540px;
+      overflow-y:auto;
+      padding-right:8px;
+      scrollbar-width:thin;
+      scrollbar-color:rgba(255,255,255,.24) transparent;
+    }
+    .mini-race-board::-webkit-scrollbar { width:7px; }
+    .mini-race-board::-webkit-scrollbar-thumb { background:rgba(255,255,255,.24); border-radius:999px; }
+    .mini-runner-top { margin-bottom:6px !important; }
+    .mini-name { font-size:16px !important; }
+    .mini-result { font-size:15px !important; }
+    .mini-track { height:10px !important; }
+    .finish-history-title { font-size:13px !important; }
+    .finish-history-row {
+      grid-template-columns:60px 1fr 44px !important;
+      gap:8px !important;
+      font-size:14px !important;
+    }
+    .finish-history { max-height:190px; overflow-y:auto; padding-right:5px; }
+
+    /* Larger Live Top Sales Board */
+    .sales-title { font-size:26px !important; }
+    .sales-note { font-size:15px !important; }
+    .sales-live { font-size:14px !important; }
+    .sales-table th {
+      padding:16px 18px !important;
+      font-size:14px !important;
+    }
+    .sales-table td {
+      padding:18px 18px !important;
+      font-size:18px !important;
+    }
+    .sales-rank { font-size:22px !important; }
+    .sales-name { font-size:18px !important; }
+    .sales-revenue { font-size:19px !important; }
+    .sales-deals { font-size:18px !important; }
+    .level-pill,.target-pill {
+      min-width:62px !important;
+      padding:8px 12px !important;
+      font-size:14px !important;
+    }
+
+    @media (max-width:900px) {
+      .mini-race-title { font-size:20px !important; }
+      .mini-name { font-size:14px !important; }
+      .mini-result { font-size:13px !important; }
+      .sales-title { font-size:22px !important; }
+      .sales-table th { font-size:12px !important; padding:13px 14px !important; }
+      .sales-table td { font-size:15px !important; padding:15px 14px !important; }
+      .sales-name { font-size:16px !important; }
+      .sales-revenue { font-size:17px !important; }
+      .sales-deals { font-size:16px !important; }
+      .level-pill,.target-pill { font-size:12px !important; padding:6px 9px !important; }
+    }
+  </style>
 </head>
 <body>
   <main class="app-shell">
