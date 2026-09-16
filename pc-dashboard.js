@@ -3,6 +3,7 @@ const $=s=>document.querySelector(s);
 const money=v=>`฿${new Intl.NumberFormat('en-US',{maximumFractionDigits:0}).format(Number(v||0))}`;
 const pct=v=>v===null||v===undefined||v===''?'—':`${Number(v||0).toFixed(2)}%`;
 const tokenKey='pcDashboardToken';
+const cacheKey='pcDashboardCache';
 
 async function post(params){
   const res=await fetch(API_URL,{method:'POST',body:new URLSearchParams(params)});
@@ -11,6 +12,20 @@ async function post(params){
   if(!data.ok) throw new Error(data.error||'Request failed');
   return data;
 }
+
+function getToken(){
+  let token=localStorage.getItem(tokenKey);
+  if(!token){
+    token=sessionStorage.getItem(tokenKey);
+    if(token){localStorage.setItem(tokenKey,token);sessionStorage.removeItem(tokenKey);}
+  }
+  return token;
+}
+function setToken(token){localStorage.setItem(tokenKey,token);sessionStorage.removeItem(tokenKey);}
+function clearToken(){localStorage.removeItem(tokenKey);sessionStorage.removeItem(tokenKey);localStorage.removeItem(cacheKey);}
+function saveCache(data){try{localStorage.setItem(cacheKey,JSON.stringify(data));}catch(e){}}
+function getCache(){try{return JSON.parse(localStorage.getItem(cacheKey)||'null');}catch(e){return null;}}
+function isSessionError(err){return /session expired|invalid session|unauthori[sz]ed/i.test(String(err&&err.message||err||''));}
 
 function setLoginMode(loggedIn){
   $('#loginCard').classList.toggle('hidden',loggedIn);
@@ -52,7 +67,6 @@ function render(data){
   $('#deals').textContent=new Intl.NumberFormat('en-US',{maximumFractionDigits:2}).format(c.deals||0);
   $('#dealsTarget').textContent=`Target ${new Intl.NumberFormat('en-US',{maximumFractionDigits:2}).format(c.targetDeals||0)}`;
   $('#conversion').textContent=c.conversionAvailable?pct(c.conversion):'Pending';
-  // KPI cannot be final while conversion is pending, even if the monthly sheet currently shows a provisional KPI.
   $('#kpi').textContent=c.conversionAvailable && c.kpiAvailable!==false?pct(c.kpi):'Pending';
 
   $('#historyBody').innerHTML=history.map(r=>`<tr>
@@ -67,11 +81,9 @@ function render(data){
   $('#levelHeadline').textContent=s.headline||'Month in progress';
   $('#levelMessage').textContent=s.message||'Final status will be confirmed after month-end conversion is entered.';
 
-  // Keep the status area focused: no 2M Avg KPI / 3M Avg KPI cards.
   let facts=(s.facts||[]).filter(f=>!/^2M Avg KPI$/i.test(f.label||'') && !/^3M Avg KPI$/i.test(f.label||''));
   facts=facts.filter(f=>!/^Minimum rev before level down$/i.test(f.label||''));
 
-  // Compatibility fallback for older Apps Script deployments: calculate the retention revenue estimate here.
   let retentionValue='Waiting for 2 completed months';
   const retain=Number(s.retentionMinimum);
   const prev=history[0], prev2=history[1];
@@ -113,17 +125,43 @@ function render(data){
   setLoginMode(true);
 }
 
-async function loadDashboard(){
-  const token=sessionStorage.getItem(tokenKey);
+function showRefreshProblem(){
+  setLoginMode(true);
+  if($('#statusBadge')){
+    $('#statusBadge').textContent='RETRYING';
+    $('#statusBadge').className='status-badge warn';
+  }
+}
+
+async function loadDashboard({silent=false}={}){
+  const token=getToken();
   if(!token){setLoginMode(false);return;}
+
+  const cached=getCache();
+  if(cached && !silent){
+    render(cached);
+  } else if(!silent){
+    setLoginMode(true);
+    $('#statusBadge').textContent='LOADING';
+    $('#statusBadge').className='status-badge warn';
+  }
+
   try{
     const data=await post({action:'dashboard',token});
+    saveCache(data);
     render(data);
   }catch(e){
-    sessionStorage.removeItem(tokenKey);
-    setLoginMode(false);
-    $('#loginError').textContent='Session expired. Please log in again.';
-    $('#loginError').classList.remove('hidden');
+    if(isSessionError(e)){
+      clearToken();
+      setLoginMode(false);
+      $('#loginError').textContent='Session expired. Please log in again.';
+      $('#loginError').classList.remove('hidden');
+      return;
+    }
+    console.warn('Dashboard refresh failed:',e);
+    if(cached) render(cached);
+    showRefreshProblem();
+    setTimeout(()=>loadDashboard({silent:true}),5000);
   }
 }
 
@@ -134,17 +172,24 @@ $('#loginForm').addEventListener('submit',async e=>{
   btn.disabled=true;btn.textContent='Checking…';
   try{
     const data=await post({action:'login',username:$('#username').value.trim(),pin:$('#pin').value.trim()});
-    sessionStorage.setItem(tokenKey,data.token);
-    await loadDashboard();
+    setToken(data.token);
+    setLoginMode(true);
+    $('#statusBadge').textContent='LOADING';
+    $('#statusBadge').className='status-badge warn';
+    btn.disabled=false;btn.textContent='Open dashboard';
+    loadDashboard({silent:true});
+    return;
   }catch(err){
     $('#loginError').textContent=err.message==='Invalid login'?'Username or PIN is incorrect.':err.message;
     $('#loginError').classList.remove('hidden');
-  }finally{btn.disabled=false;btn.textContent='Open dashboard';}
+  }finally{
+    btn.disabled=false;btn.textContent='Open dashboard';
+  }
 });
 
 $('#logoutBtn').addEventListener('click',async()=>{
-  const token=sessionStorage.getItem(tokenKey);
-  sessionStorage.removeItem(tokenKey);
+  const token=getToken();
+  clearToken();
   if(token){try{await post({action:'logout',token});}catch(e){}}
   setLoginMode(false);
 });
