@@ -1,5 +1,5 @@
 {
   "rewrites": [
-    { "source": "/pc-dashboard", "destination": "/pc-dashboard.html" }
+    { "source": "/pc-dashboard", "destination": "/pc-dashboard/index.html" }
   ]
 }
