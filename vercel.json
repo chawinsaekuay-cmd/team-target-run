@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/pc-dashboard", "destination": "/pc-dashboard.html" }
+  ]
+}
