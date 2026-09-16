@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PC Performance Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/pc-dashboard.css" />
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">PRIVATE PC PERFORMANCE</div>
+        <h1>My Performance</h1>
+      </div>
+      <div class="actions">
+        <a class="ghost-btn" href="/">Leaderboard</a>
+        <button id="logoutBtn" class="ghost-btn hidden">Log out</button>
+      </div>
+    </header>
+
+    <section id="loginCard" class="login-card card">
+      <div class="login-copy">
+        <div class="section-kicker">PC LOGIN</div>
+        <h2>See your own performance only</h2>
+        <p>Use your PC nickname and PIN.</p>
+      </div>
+      <form id="loginForm" class="login-form">
+        <label>Username<input id="username" autocomplete="username" required placeholder="e.g. Beam" /></label>
+        <label>PIN<input id="pin" type="password" inputmode="numeric" autocomplete="current-password" required placeholder="6-digit PIN" /></label>
+        <button class="primary-btn" type="submit">Open dashboard</button>
+        <div id="loginError" class="error hidden"></div>
+      </form>
+    </section>
+
+    <section id="dashboard" class="hidden">
+      <section class="hero card">
+        <div>
+          <div id="monthLabel" class="section-kicker">CURRENT MONTH</div>
+          <h2 id="welcomeName">Welcome</h2>
+          <div class="hero-meta">Current level <strong id="currentLevel">—</strong></div>
+        </div>
+        <div id="statusBadge" class="status-badge">Loading</div>
+      </section>
+
+      <section class="metric-grid">
+        <article class="metric card"><span>Revenue</span><strong id="revenue">—</strong><small id="revenueTarget">Target —</small></article>
+        <article class="metric card"><span>Deals</span><strong id="deals">—</strong><small id="dealsTarget">Target —</small></article>
+        <article class="metric card"><span>Conversion</span><strong id="conversion">—</strong><small>Actual from monthly tab</small></article>
+        <article class="metric card"><span>KPI</span><strong id="kpi">—</strong><small>Sheet KPI</small></article>
+      </section>
+
+      <section class="card section-card">
+        <div class="section-head">
+          <div><div class="section-kicker">ROLLING HISTORY</div><h3>Last 3 months</h3></div>
+          <div id="avgKpi" class="avg-chip">3M Avg —</div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Month</th><th>Level</th><th>Revenue</th><th>Deals</th><th>Conversion</th><th>KPI</th></tr></thead>
+            <tbody id="historyBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="level-grid">
+        <article class="card section-card level-card">
+          <div class="section-kicker">LEVEL STATUS</div>
+          <h3 id="levelHeadline">—</h3>
+          <p id="levelMessage" class="big-message">—</p>
+          <div id="levelFacts" class="facts"></div>
+        </article>
+
+        <article class="card section-card target-card">
+          <div class="section-kicker">THIS MONTH</div>
+          <h3 id="nextLevelTitle">Estimated target</h3>
+          <div class="target-number" id="estimatedRevenueTarget">—</div>
+          <div id="revenueGap" class="gap-line">—</div>
+          <p id="estimateNote" class="note">Revenue equivalent only. Final level eligibility is confirmed after month-end conversion is entered.</p>
+        </article>
+      </section>
+
+      <section class="card section-card">
+        <div class="section-head"><div><div class="section-kicker">CURRENT MONTH</div><h3>Performance breakdown</h3></div></div>
+        <div id="breakdown" class="breakdown"></div>
+      </section>
+    </section>
+  </main>
+  <script src="/pc-dashboard.js"></script>
+</body>
+</html>
