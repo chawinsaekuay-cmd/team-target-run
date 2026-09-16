@@ -138,19 +138,24 @@ function render(data){
     $('#revenueGap').className='gap-line';
     $('#estimateNote').textContent=`The normal ${s.nextLevel} promotion target will apply only after the ${tenureRequired}-month tenure requirement is met.`;
   } else if(s.nextLevel){
+    const baseTarget=Number(c.targetRevenue||0);
+    const backendEstimate=s.estimatedRevenueTarget==null?null:Number(s.estimatedRevenueTarget);
+    const estimatedTarget=backendEstimate==null||!Number.isFinite(backendEstimate)?null:Math.max(baseTarget,backendEstimate);
+    const revenueGap=estimatedTarget==null?null:Math.max(0,estimatedTarget-Number(c.revenue||0));
+
     $('#nextLevelTitle').textContent=`Estimated target to reach ${s.nextLevel}`;
-    $('#estimatedRevenueTarget').textContent=s.estimatedRevenueTarget==null?'—':money(s.estimatedRevenueTarget);
-    if(s.revenueGap==null){
+    $('#estimatedRevenueTarget').textContent=estimatedTarget==null?'—':money(estimatedTarget);
+    if(revenueGap==null){
       $('#revenueGap').textContent='Waiting for enough completed history';
       $('#revenueGap').className='gap-line';
-    } else if(s.revenueGap<=0){
+    } else if(revenueGap<=0){
       $('#revenueGap').textContent='Revenue estimate already reached';
       $('#revenueGap').className='gap-line positive';
     } else {
-      $('#revenueGap').textContent=`${money(s.revenueGap)} more needed`;
+      $('#revenueGap').textContent=`${money(revenueGap)} more needed`;
       $('#revenueGap').className='gap-line negative';
     }
-    $('#estimateNote').textContent='Revenue equivalent only. Final level eligibility is confirmed after month-end conversion is entered.';
+    $('#estimateNote').textContent='Revenue equivalent only. Promotion estimate is never lower than 100% of the current monthly revenue target. Final level eligibility is confirmed after month-end conversion is entered.';
   } else {
     $('#nextLevelTitle').textContent='Current level';
     $('#estimatedRevenueTarget').textContent='Top level';
