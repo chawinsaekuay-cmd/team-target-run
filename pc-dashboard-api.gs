@@ -155,7 +155,7 @@ function pcReadMonthlyRow_(sheet, staffCode) {
     const i = pcFindCol_(headers,names);
     return i >= 0 ? row[i] : '';
   };
-  const conversionRaw = get(['conversion (l60%)','conversion','conversion %']);
+  const conversionRaw = get(['conversion (l60%)','conversion rate (l60%)','conversion','conversion %','conversion rate']);
   const kpiRaw = get(['kpi']);
   const conversionAvailable = String(conversionRaw || '').trim() !== '';
   const kpiAvailable = conversionAvailable && String(kpiRaw || '').trim() !== '';
