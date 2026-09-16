@@ -6,7 +6,6 @@
 
 const PC_LOGIN_SHEET_ = 'PC_Login';
 const PC_SESSION_SECONDS_ = 21600; // 6 hours
-const PC_CONVERSION_TARGET_ = 12;
 
 function doPost(e) {
   try {
@@ -89,8 +88,10 @@ function pcDashboard_(token) {
   if (!all.length) throw new Error('No performance data found for this PC');
 
   const current = all[0];
-  const history = all.slice(0,3);
-  const threeMonthAvgKpi = pcAverage_(history.map(r => r.kpi));
+  // Rolling history is always the last three COMPLETED months. The current month is separate.
+  // Example in September: June / July / August are used for the 3M record and 3M average.
+  const history = all.slice(1,4);
+  const threeMonthAvgKpi = pcAverage_(history.map(r => r.kpiAvailable ? r.kpi : null));
   const levelStatus = pcLevelStatus_(current, all, threeMonthAvgKpi);
 
   return {
@@ -101,8 +102,7 @@ function pcDashboard_(token) {
     current:current,
     history:history,
     threeMonthAvgKpi:threeMonthAvgKpi,
-    levelStatus:levelStatus,
-    breakdown:pcBreakdown_(current)
+    levelStatus:levelStatus
   };
 }
 
@@ -157,6 +157,8 @@ function pcReadMonthlyRow_(sheet, staffCode) {
   };
   const conversionRaw = get(['conversion (l60%)','conversion','conversion %']);
   const kpiRaw = get(['kpi']);
+  const conversionAvailable = String(conversionRaw || '').trim() !== '';
+  const kpiAvailable = conversionAvailable && String(kpiRaw || '').trim() !== '';
   return {
     name:String(get(['pc']) || '').trim(),
     level:pcNormalizeLevel_(get(['level'])),
@@ -165,10 +167,10 @@ function pcReadMonthlyRow_(sheet, staffCode) {
     targetRevenue:pcNum_(get(['target r','target revenue'])),
     revenue:pcNum_(get(['revenue'])),
     revenuePct:pcPct_(get(['%','revenue kpi'])),
-    conversion:pcNum_(conversionRaw),
-    conversionAvailable:String(conversionRaw || '').trim() !== '',
-    kpi:pcPct_(kpiRaw),
-    kpiAvailable:String(kpiRaw || '').trim() !== ''
+    conversion:conversionAvailable ? pcNum_(conversionRaw) : null,
+    conversionAvailable:conversionAvailable,
+    kpi:kpiAvailable ? pcPct_(kpiRaw) : null,
+    kpiAvailable:kpiAvailable
   };
 }
 
@@ -189,7 +191,9 @@ function pcNum_(v) {
 }
 function pcPct_(v) { return pcNum_(v); }
 function pcAverage_(arr) {
-  const nums = (arr || []).filter(v => Number.isFinite(Number(v))).map(Number);
+  const nums = (arr || [])
+    .filter(v => v !== null && v !== undefined && v !== '' && Number.isFinite(Number(v)))
+    .map(Number);
   return nums.length ? nums.reduce((a,b) => a+b,0) / nums.length : null;
 }
 function pcNormalizeLevel_(v) {
@@ -207,7 +211,9 @@ function pcLevelStatus_(current, all, threeMonthAvg) {
   const downThreshold = {'R[1]N':0,'R2':90,'R3':90,'R4':85,'R5':80};
   const nextLevel = nextByLevel[level] || null;
   const previous = all.length > 1 ? all[1] : null;
-  const avg2 = previous ? pcAverage_([current.kpi, previous.kpi]) : null;
+  const previous2 = all.length > 2 ? all[2] : null;
+  const avg2 = current.kpiAvailable && previous && previous.kpiAvailable
+    ? pcAverage_([current.kpi, previous.kpi]) : null;
   const retain = downThreshold[level];
 
   let consecutive = 0;
@@ -218,19 +224,30 @@ function pcLevelStatus_(current, all, threeMonthAvg) {
   const tenureRequired = (level === 'R3' || level === 'R4') ? 3 : 0;
   const fastTrack = avg2 != null && avg2 >= 200;
   const tenureMet = tenureRequired === 0 || consecutive >= tenureRequired || fastTrack;
-  const finalMonth = !!current.conversionAvailable;
-  const facts = [];
+  const finalMonth = !!current.kpiAvailable;
 
-  if (nextLevel) facts.push({label:'Level-up rule',value:'2M Avg ≥ ' + upThreshold[level] + '%'});
-  facts.push({label:'2M Avg KPI',value:pcFmtPct_(avg2)});
-  facts.push({label:'3M Avg KPI',value:pcFmtPct_(threeMonthAvg)});
-  facts.push({label:'Retention minimum',value:retain == null ? '—' : retain + '%'});
+  // Estimate the minimum current-month KPI/revenue needed to keep the rolling 3M
+  // average at the level-retention threshold. This is an estimate until conversion is final.
+  let retentionKpiNeeded = null;
+  let retentionRevenueNeeded = null;
+  if (retain != null && previous && previous2 && previous.kpiAvailable && previous2.kpiAvailable) {
+    retentionKpiNeeded = Math.max(0, retain * 3 - Number(previous.kpi) - Number(previous2.kpi));
+    retentionRevenueNeeded = Number(current.targetRevenue || 0) * retentionKpiNeeded / 100;
+  }
+
+  const facts = [];
+  if (nextLevel) facts.push({label:'Level-up requirement',value:'Avg ≥ ' + upThreshold[level] + '% across 2 completed months'});
+  facts.push({label:'Retention minimum',value:retain == null ? '—' : retain + '% avg / 3 months'});
+  facts.push({
+    label:'Minimum rev before level down',
+    value:retentionRevenueNeeded == null ? 'Waiting for history' : (retentionRevenueNeeded <= 0 ? 'Already covered' : '≈ ' + pcFmtMoney_(retentionRevenueNeeded) + ' this month')
+  });
   if (tenureRequired) facts.push({label:'Time at ' + level,value:consecutive + ' / ' + tenureRequired + ' months'});
 
-  let code='SECURE', badge='LEVEL SECURE', headline='Current level secure', message='Your rolling performance is above the retention requirement.';
+  let code='SECURE', badge='LEVEL SECURE', headline='Current level secure', message='Your completed 3-month record is above the retention requirement.';
   if (!finalMonth) {
     code='IN_PROGRESS'; badge='ESTIMATE'; headline=nextLevel ? 'Working toward ' + nextLevel : 'Month in progress';
-    message='Final status will be confirmed after month-end conversion is entered.';
+    message='Current-month KPI is pending until conversion is entered. Revenue targets below are estimates.';
   } else if (nextLevel && avg2 != null && avg2 >= upThreshold[level] && tenureMet) {
     code=fastTrack && tenureRequired ? 'FAST_TRACK' : 'ELIGIBLE';
     badge=fastTrack && tenureRequired ? 'FAST-TRACK' : 'ELIGIBLE';
@@ -241,18 +258,17 @@ function pcLevelStatus_(current, all, threeMonthAvg) {
     message=(tenureRequired-consecutive) + ' more month' + ((tenureRequired-consecutive)===1?'':'s') + ' at ' + level + ' required before moving to ' + nextLevel + '.';
   } else if (threeMonthAvg != null && retain != null && threeMonthAvg < retain) {
     code='RISK'; badge='AT RISK'; headline='At risk of level down';
-    message='Your 3-month KPI average is below the ' + retain + '% retention requirement for ' + level + '.';
+    message='Your last 3 completed months are below the ' + retain + '% retention requirement for ' + level + '.';
   } else if (nextLevel) {
     code='ALMOST'; badge='IN PROGRESS'; headline='Working toward ' + nextLevel;
-    message='Keep building this month toward the 2-month average requirement.';
+    message='Keep building this month toward the revenue estimate needed for the next level.';
   }
 
   let requiredCurrentKpi = null, estimatedRevenueTarget = null, revenueGap = null;
-  if (nextLevel && previous) {
-    requiredCurrentKpi = Math.max(0, upThreshold[level] * 2 - Number(previous.kpi || 0));
+  if (nextLevel && previous && previous.kpiAvailable) {
+    requiredCurrentKpi = Math.max(0, upThreshold[level] * 2 - Number(previous.kpi));
     estimatedRevenueTarget = Number(current.targetRevenue || 0) * requiredCurrentKpi / 100;
     revenueGap = Math.max(0, estimatedRevenueTarget - Number(current.revenue || 0));
-    facts.push({label:'This month KPI needed',value:'~' + requiredCurrentKpi.toFixed(2) + '%'});
   }
 
   return {
@@ -262,19 +278,10 @@ function pcLevelStatus_(current, all, threeMonthAvg) {
     requiredCurrentKpi:requiredCurrentKpi,
     estimatedRevenueTarget:estimatedRevenueTarget,
     revenueGap:revenueGap,
+    retentionKpiNeeded:retentionKpiNeeded,
+    retentionRevenueNeeded:retentionRevenueNeeded,
     facts:facts
   };
-}
-
-function pcBreakdown_(current) {
-  const revenuePct = Number(current.revenuePct || (current.targetRevenue ? current.revenue/current.targetRevenue*100 : 0));
-  const dealsPct = current.targetDeals ? Number(current.deals || 0) / Number(current.targetDeals) * 100 : 0;
-  const conversionAvailable = !!current.conversionAvailable;
-  return [
-    {label:'Revenue',current:revenuePct.toFixed(2)+'%',target:'100%',status:revenuePct>=100?'✓':'Below',statusClass:revenuePct>=100?'ok':'bad'},
-    {label:'Deals',current:dealsPct.toFixed(2)+'%',target:'100%',status:dealsPct>=100?'✓':'Below',statusClass:dealsPct>=100?'ok':'bad'},
-    {label:'Conversion',current:conversionAvailable?Number(current.conversion||0).toFixed(2)+'%':'Pending',target:PC_CONVERSION_TARGET_.toFixed(0)+'%',status:conversionAvailable?(Number(current.conversion)>=PC_CONVERSION_TARGET_?'✓':'Below'):'Pending',statusClass:conversionAvailable?(Number(current.conversion)>=PC_CONVERSION_TARGET_?'ok':'bad'):'pending'}
-  ];
 }
 
 function pcJson_(obj) {
