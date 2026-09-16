@@ -39,27 +39,41 @@ function pcLogin_(username, pin) {
 
   const staffCode = String(match[1] || '').trim();
   const token = Utilities.getUuid().replace(/-/g,'') + Utilities.getUuid().replace(/-/g,'');
-  CacheService.getScriptCache().put('pcsession:' + token, JSON.stringify({
+  const now = Date.now();
+  const payload = {
     username:user,
     staffCode:staffCode,
-    issuedAt:new Date().toISOString()
-  }), PC_SESSION_SECONDS_);
+    issuedAt:now,
+    expiresAt:now + PC_SESSION_SECONDS_ * 1000
+  };
+  PropertiesService.getScriptProperties().setProperty('pcsession:' + token, JSON.stringify(payload));
   return { ok:true, token:token, username:user };
 }
 
 function pcLogout_(token) {
   const t = String(token || '').trim();
-  if (t) CacheService.getScriptCache().remove('pcsession:' + t);
+  if (t) PropertiesService.getScriptProperties().deleteProperty('pcsession:' + t);
   return { ok:true };
 }
 
 function pcSession_(token) {
   const t = String(token || '').trim();
   if (!t) throw new Error('Session expired');
-  const raw = CacheService.getScriptCache().get('pcsession:' + t);
+  const props = PropertiesService.getScriptProperties();
+  const key = 'pcsession:' + t;
+  const raw = props.getProperty(key);
   if (!raw) throw new Error('Session expired');
-  CacheService.getScriptCache().put('pcsession:' + t, raw, PC_SESSION_SECONDS_);
-  return JSON.parse(raw);
+
+  const session = JSON.parse(raw);
+  const now = Date.now();
+  if (!session.expiresAt || now > Number(session.expiresAt)) {
+    props.deleteProperty(key);
+    throw new Error('Session expired');
+  }
+
+  session.expiresAt = now + PC_SESSION_SECONDS_ * 1000;
+  props.setProperty(key, JSON.stringify(session));
+  return session;
 }
 
 function pcHashPin_(username, pin, salt) {
