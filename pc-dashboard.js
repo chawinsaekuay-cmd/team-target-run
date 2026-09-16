@@ -95,10 +95,22 @@ function render(data){
   $('#avgKpi').textContent=`3M Avg ${completedAvg==null?'—':pct(completedAvg)}`;
 
   const s=data.levelStatus||{};
-  $('#statusBadge').textContent=s.badge||'ESTIMATE';
-  $('#statusBadge').className=`status-badge ${statusClass(s.code)}`;
-  $('#levelHeadline').textContent=s.headline||'Month in progress';
-  $('#levelMessage').textContent=s.message||'Final status will be confirmed after month-end conversion is entered.';
+  const tenureRequired=Number(s.tenureRequired||0);
+  const tenureMonths=Number(s.tenureMonths||0);
+  const tenureBlocked=!!s.nextLevel && tenureRequired>0 && tenureMonths<tenureRequired && !s.fastTrack;
+  const monthsRemaining=Math.max(0,tenureRequired-tenureMonths);
+
+  if(tenureBlocked){
+    $('#statusBadge').textContent='WAITING';
+    $('#statusBadge').className='status-badge warn';
+    $('#levelHeadline').textContent=monthsRemaining===1?'1 more month required':`${monthsRemaining} more months required`;
+    $('#levelMessage').textContent=`You need ${tenureRequired} months at ${c.level} before moving to ${s.nextLevel}. Current tenure: ${tenureMonths}/${tenureRequired} months.`;
+  } else {
+    $('#statusBadge').textContent=s.badge||'ESTIMATE';
+    $('#statusBadge').className=`status-badge ${statusClass(s.code)}`;
+    $('#levelHeadline').textContent=s.headline||'Month in progress';
+    $('#levelMessage').textContent=s.message||'Final status will be confirmed after month-end conversion is entered.';
+  }
 
   let facts=(s.facts||[]).filter(f=>!/^2M Avg KPI$/i.test(f.label||'') && !/^3M Avg KPI$/i.test(f.label||''));
   facts=facts.filter(f=>!/^Minimum rev before level down$/i.test(f.label||''));
@@ -119,7 +131,13 @@ function render(data){
   facts.push({label:'Minimum rev before level down',value:retentionValue});
   $('#levelFacts').innerHTML=facts.map(f=>`<div class="fact"><span>${f.label}</span><strong>${f.value}</strong></div>`).join('');
 
-  if(s.nextLevel){
+  if(tenureBlocked){
+    $('#nextLevelTitle').textContent=`Tenure before ${s.nextLevel}`;
+    $('#estimatedRevenueTarget').textContent=`${tenureMonths} / ${tenureRequired} months`;
+    $('#revenueGap').textContent=monthsRemaining===1?'1 more month required':`${monthsRemaining} more months required`;
+    $('#revenueGap').className='gap-line';
+    $('#estimateNote').textContent=`The normal ${s.nextLevel} promotion target will apply only after the ${tenureRequired}-month tenure requirement is met.`;
+  } else if(s.nextLevel){
     $('#nextLevelTitle').textContent=`Estimated target to reach ${s.nextLevel}`;
     $('#estimatedRevenueTarget').textContent=s.estimatedRevenueTarget==null?'—':money(s.estimatedRevenueTarget);
     if(s.revenueGap==null){
