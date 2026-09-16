@@ -54,6 +54,22 @@ function avgCompletedKpi(rows){
   return vals.length===3 ? vals.reduce((a,b)=>a+b,0)/3 : null;
 }
 
+function levelRank(level){
+  const s=String(level||'').trim().toUpperCase().replace(/\s+/g,'');
+  if(s==='RN'||s==='R1'||s==='R[1]N') return 1;
+  return ({R2:2,R3:3,R4:4,R5:5})[s]||0;
+}
+
+function monthlyLevelResult(row,index,history,current){
+  const next=index===0?current:history[index-1];
+  if(!next) return {label:'—',cls:''};
+  const from=levelRank(row.level), to=levelRank(next.level);
+  if(!from||!to) return {label:'—',cls:''};
+  if(to>from) return {label:'↑ Level Up',cls:'up'};
+  if(to<from) return {label:'↓ Level Down',cls:'down'};
+  return {label:'Stay',cls:'stay'};
+}
+
 function render(data){
   const c=data.current;
   const history=completedHistory(data);
@@ -69,10 +85,13 @@ function render(data){
   $('#conversion').textContent=c.conversionAvailable?pct(c.conversion):'Pending';
   $('#kpi').textContent=c.conversionAvailable && c.kpiAvailable!==false?pct(c.kpi):'Pending';
 
-  $('#historyBody').innerHTML=history.map(r=>`<tr>
-    <td>${r.monthLabel}</td><td>${r.level||'—'}</td><td>${money(r.revenue)}</td><td>${Number(r.deals||0).toFixed(0)}</td>
-    <td>${r.conversionAvailable?pct(r.conversion):'Pending'}</td><td>${r.conversionAvailable && r.kpiAvailable!==false?pct(r.kpi):'Pending'}</td>
-  </tr>`).join('')||'<tr><td colspan="6">No completed history yet.</td></tr>';
+  $('#historyBody').innerHTML=history.map((r,i)=>{
+    const result=monthlyLevelResult(r,i,history,c);
+    return `<tr>
+      <td>${r.monthLabel}</td><td>${r.level||'—'}</td><td><span class="history-result ${result.cls}">${result.label}</span></td><td>${money(r.revenue)}</td><td>${Number(r.deals||0).toFixed(0)}</td>
+      <td>${r.conversionAvailable?pct(r.conversion):'Pending'}</td><td>${r.conversionAvailable && r.kpiAvailable!==false?pct(r.kpi):'Pending'}</td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="7">No completed history yet.</td></tr>';
   $('#avgKpi').textContent=`3M Avg ${completedAvg==null?'—':pct(completedAvg)}`;
 
   const s=data.levelStatus||{};
