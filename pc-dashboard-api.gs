@@ -88,8 +88,6 @@ function pcDashboard_(token) {
   if (!all.length) throw new Error('No performance data found for this PC');
 
   const current = all[0];
-  // Rolling history is always the last three COMPLETED months. The current month is separate.
-  // Example in September: June / July / August are used for the 3M record and 3M average.
   const history = all.slice(1,4);
   const threeMonthAvgKpi = pcAverage_(history.map(r => r.kpiAvailable ? r.kpi : null));
   const levelStatus = pcLevelStatus_(current, all, threeMonthAvgKpi);
@@ -206,13 +204,14 @@ function pcFmtMoney_(v) { return '฿' + Math.round(Number(v || 0)).toLocaleStri
 
 function pcLevelStatus_(current, all, threeMonthAvg) {
   const level = pcNormalizeLevel_(current.level);
+  const isRN = level === 'R[1]N';
   const nextByLevel = {'R[1]N':'R2','R2':'R3','R3':'R4','R4':'R5'};
   const upThreshold = {'R[1]N':100,'R2':115,'R3':125,'R4':135};
   const downThreshold = {'R[1]N':0,'R2':90,'R3':90,'R4':85,'R5':80};
   const nextLevel = nextByLevel[level] || null;
   const previous = all.length > 1 ? all[1] : null;
   const previous2 = all.length > 2 ? all[2] : null;
-  const avg2 = current.kpiAvailable && previous && previous.kpiAvailable
+  const avg2 = !isRN && current.kpiAvailable && previous && previous.kpiAvailable
     ? pcAverage_([current.kpi, previous.kpi]) : null;
   const retain = downThreshold[level];
 
@@ -222,12 +221,10 @@ function pcLevelStatus_(current, all, threeMonthAvg) {
     else break;
   }
   const tenureRequired = (level === 'R3' || level === 'R4') ? 3 : 0;
-  const fastTrack = avg2 != null && avg2 >= 200;
+  const fastTrack = !isRN && avg2 != null && avg2 >= 200;
   const tenureMet = tenureRequired === 0 || consecutive >= tenureRequired || fastTrack;
   const finalMonth = !!current.kpiAvailable;
 
-  // Estimate the minimum current-month KPI/revenue needed to keep the rolling 3M
-  // average at the level-retention threshold. This is an estimate until conversion is final.
   let retentionKpiNeeded = null;
   let retentionRevenueNeeded = null;
   if (retain != null && previous && previous2 && previous.kpiAvailable && previous2.kpiAvailable) {
@@ -236,7 +233,12 @@ function pcLevelStatus_(current, all, threeMonthAvg) {
   }
 
   const facts = [];
-  if (nextLevel) facts.push({label:'Level-up requirement',value:'Avg ≥ ' + upThreshold[level] + '% across 2 completed months'});
+  if (nextLevel) {
+    facts.push({
+      label:'Level-up requirement',
+      value:isRN ? '100% KPI in this month' : 'Avg ≥ ' + upThreshold[level] + '% across 2 completed months'
+    });
+  }
   facts.push({label:'Retention minimum',value:retain == null ? '—' : retain + '% avg / 3 months'});
   facts.push({
     label:'Minimum rev before level down',
@@ -248,12 +250,15 @@ function pcLevelStatus_(current, all, threeMonthAvg) {
   if (!finalMonth) {
     code='IN_PROGRESS'; badge='ESTIMATE'; headline=nextLevel ? 'Working toward ' + nextLevel : 'Month in progress';
     message='Current-month KPI is pending until conversion is entered. Revenue targets below are estimates.';
-  } else if (nextLevel && avg2 != null && avg2 >= upThreshold[level] && tenureMet) {
+  } else if (isRN && nextLevel && Number(current.kpi) >= 100) {
+    code='ELIGIBLE'; badge='ELIGIBLE'; headline='Eligible for R2';
+    message='You reached at least 100% KPI this month.';
+  } else if (!isRN && nextLevel && avg2 != null && avg2 >= upThreshold[level] && tenureMet) {
     code=fastTrack && tenureRequired ? 'FAST_TRACK' : 'ELIGIBLE';
     badge=fastTrack && tenureRequired ? 'FAST-TRACK' : 'ELIGIBLE';
     headline='Eligible for ' + nextLevel;
     message=fastTrack && tenureRequired ? 'The accelerated level-up condition is met.' : 'All configured level-up requirements are met.';
-  } else if (nextLevel && avg2 != null && avg2 >= upThreshold[level] && !tenureMet) {
+  } else if (!isRN && nextLevel && avg2 != null && avg2 >= upThreshold[level] && !tenureMet) {
     code='TENURE'; badge='WAITING'; headline='Performance target met';
     message=(tenureRequired-consecutive) + ' more month' + ((tenureRequired-consecutive)===1?'':'s') + ' at ' + level + ' required before moving to ' + nextLevel + '.';
   } else if (threeMonthAvg != null && retain != null && threeMonthAvg < retain) {
@@ -261,14 +266,20 @@ function pcLevelStatus_(current, all, threeMonthAvg) {
     message='Your last 3 completed months are below the ' + retain + '% retention requirement for ' + level + '.';
   } else if (nextLevel) {
     code='ALMOST'; badge='IN PROGRESS'; headline='Working toward ' + nextLevel;
-    message='Keep building this month toward the revenue estimate needed for the next level.';
+    message=isRN ? 'Reach 100% KPI this month to move to R2.' : 'Keep building this month toward the revenue estimate needed for the next level.';
   }
 
   let requiredCurrentKpi = null, estimatedRevenueTarget = null, revenueGap = null;
-  if (nextLevel && previous && previous.kpiAvailable) {
-    requiredCurrentKpi = Math.max(0, upThreshold[level] * 2 - Number(previous.kpi));
-    estimatedRevenueTarget = Number(current.targetRevenue || 0) * requiredCurrentKpi / 100;
-    revenueGap = Math.max(0, estimatedRevenueTarget - Number(current.revenue || 0));
+  if (nextLevel) {
+    if (isRN) {
+      requiredCurrentKpi = 100;
+      estimatedRevenueTarget = Number(current.targetRevenue || 0);
+      revenueGap = Math.max(0, estimatedRevenueTarget - Number(current.revenue || 0));
+    } else if (previous && previous.kpiAvailable) {
+      requiredCurrentKpi = Math.max(0, upThreshold[level] * 2 - Number(previous.kpi));
+      estimatedRevenueTarget = Number(current.targetRevenue || 0) * requiredCurrentKpi / 100;
+      revenueGap = Math.max(0, estimatedRevenueTarget - Number(current.revenue || 0));
+    }
   }
 
   return {
