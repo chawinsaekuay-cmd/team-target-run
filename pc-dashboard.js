@@ -34,12 +34,12 @@ function render(data){
   $('#deals').textContent=new Intl.NumberFormat('en-US',{maximumFractionDigits:2}).format(c.deals||0);
   $('#dealsTarget').textContent=`Target ${new Intl.NumberFormat('en-US',{maximumFractionDigits:2}).format(c.targetDeals||0)}`;
   $('#conversion').textContent=c.conversionAvailable?pct(c.conversion):'Pending';
-  $('#kpi').textContent=pct(c.kpi);
+  $('#kpi').textContent=c.kpiAvailable?pct(c.kpi):'Pending';
 
   $('#historyBody').innerHTML=(data.history||[]).map(r=>`<tr>
     <td>${r.monthLabel}</td><td>${r.level||'—'}</td><td>${money(r.revenue)}</td><td>${Number(r.deals||0).toFixed(0)}</td>
-    <td>${r.conversionAvailable?pct(r.conversion):'Pending'}</td><td>${pct(r.kpi)}</td>
-  </tr>`).join('')||'<tr><td colspan="6">No history yet.</td></tr>';
+    <td>${r.conversionAvailable?pct(r.conversion):'Pending'}</td><td>${r.kpiAvailable?pct(r.kpi):'Pending'}</td>
+  </tr>`).join('')||'<tr><td colspan="6">No completed history yet.</td></tr>';
   $('#avgKpi').textContent=`3M Avg ${data.threeMonthAvgKpi==null?'—':pct(data.threeMonthAvgKpi)}`;
 
   const s=data.levelStatus;
@@ -53,7 +53,7 @@ function render(data){
     $('#nextLevelTitle').textContent=`Estimated target to reach ${s.nextLevel}`;
     $('#estimatedRevenueTarget').textContent=s.estimatedRevenueTarget==null?'—':money(s.estimatedRevenueTarget);
     if(s.revenueGap==null){
-      $('#revenueGap').textContent='Waiting for enough history';
+      $('#revenueGap').textContent='Waiting for enough completed history';
       $('#revenueGap').className='gap-line';
     } else if(s.revenueGap<=0){
       $('#revenueGap').textContent='Revenue estimate already reached';
@@ -68,16 +68,9 @@ function render(data){
     $('#estimatedRevenueTarget').textContent='Top level';
     $('#revenueGap').textContent='No higher level configured';
     $('#revenueGap').className='gap-line positive';
-    $('#estimateNote').textContent='Your retention status still uses the rolling 3-month KPI rule.';
+    $('#estimateNote').textContent='Retention is based on the last 3 completed months.';
   }
 
-  const b=data.breakdown||[];
-  $('#breakdown').innerHTML=b.map(x=>`<div class="break-row">
-    <div class="label">${x.label}</div>
-    <div><span class="muted">Current</span><br><strong>${x.current}</strong></div>
-    <div><span class="muted">Target</span><br><strong>${x.target}</strong></div>
-    <div class="${x.statusClass}">${x.status}</div>
-  </div>`).join('');
   setLoginMode(true);
 }
 
