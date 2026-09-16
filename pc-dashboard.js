@@ -24,8 +24,26 @@ function statusClass(code){
   return 'warn';
 }
 
+function completedHistory(data){
+  const currentLabel=String(data.currentMonthLabel||'').trim().toLowerCase();
+  return (data.history||[])
+    .filter(r=>String(r.monthLabel||'').trim().toLowerCase()!==currentLabel)
+    .slice(0,3);
+}
+
+function avgCompletedKpi(rows){
+  const vals=rows
+    .filter(r=>r.conversionAvailable && r.kpi!==null && r.kpi!==undefined && r.kpi!=='')
+    .map(r=>Number(r.kpi))
+    .filter(Number.isFinite);
+  return vals.length===3 ? vals.reduce((a,b)=>a+b,0)/3 : null;
+}
+
 function render(data){
   const c=data.current;
+  const history=completedHistory(data);
+  const completedAvg=avgCompletedKpi(history);
+
   $('#welcomeName').textContent=`Welcome, ${data.name}`;
   $('#monthLabel').textContent=data.currentMonthLabel||'CURRENT MONTH';
   $('#currentLevel').textContent=c.level||'—';
@@ -34,20 +52,41 @@ function render(data){
   $('#deals').textContent=new Intl.NumberFormat('en-US',{maximumFractionDigits:2}).format(c.deals||0);
   $('#dealsTarget').textContent=`Target ${new Intl.NumberFormat('en-US',{maximumFractionDigits:2}).format(c.targetDeals||0)}`;
   $('#conversion').textContent=c.conversionAvailable?pct(c.conversion):'Pending';
-  $('#kpi').textContent=c.kpiAvailable?pct(c.kpi):'Pending';
+  // KPI cannot be final while conversion is pending, even if the monthly sheet currently shows a provisional KPI.
+  $('#kpi').textContent=c.conversionAvailable && c.kpiAvailable!==false?pct(c.kpi):'Pending';
 
-  $('#historyBody').innerHTML=(data.history||[]).map(r=>`<tr>
+  $('#historyBody').innerHTML=history.map(r=>`<tr>
     <td>${r.monthLabel}</td><td>${r.level||'—'}</td><td>${money(r.revenue)}</td><td>${Number(r.deals||0).toFixed(0)}</td>
-    <td>${r.conversionAvailable?pct(r.conversion):'Pending'}</td><td>${r.kpiAvailable?pct(r.kpi):'Pending'}</td>
+    <td>${r.conversionAvailable?pct(r.conversion):'Pending'}</td><td>${r.conversionAvailable && r.kpiAvailable!==false?pct(r.kpi):'Pending'}</td>
   </tr>`).join('')||'<tr><td colspan="6">No completed history yet.</td></tr>';
-  $('#avgKpi').textContent=`3M Avg ${data.threeMonthAvgKpi==null?'—':pct(data.threeMonthAvgKpi)}`;
+  $('#avgKpi').textContent=`3M Avg ${completedAvg==null?'—':pct(completedAvg)}`;
 
-  const s=data.levelStatus;
-  $('#statusBadge').textContent=s.badge;
+  const s=data.levelStatus||{};
+  $('#statusBadge').textContent=s.badge||'ESTIMATE';
   $('#statusBadge').className=`status-badge ${statusClass(s.code)}`;
-  $('#levelHeadline').textContent=s.headline;
-  $('#levelMessage').textContent=s.message;
-  $('#levelFacts').innerHTML=(s.facts||[]).map(f=>`<div class="fact"><span>${f.label}</span><strong>${f.value}</strong></div>`).join('');
+  $('#levelHeadline').textContent=s.headline||'Month in progress';
+  $('#levelMessage').textContent=s.message||'Final status will be confirmed after month-end conversion is entered.';
+
+  // Keep the status area focused: no 2M Avg KPI / 3M Avg KPI cards.
+  let facts=(s.facts||[]).filter(f=>!/^2M Avg KPI$/i.test(f.label||'') && !/^3M Avg KPI$/i.test(f.label||''));
+  facts=facts.filter(f=>!/^Minimum rev before level down$/i.test(f.label||''));
+
+  // Compatibility fallback for older Apps Script deployments: calculate the retention revenue estimate here.
+  let retentionValue='Waiting for 2 completed months';
+  const retain=Number(s.retentionMinimum);
+  const prev=history[0], prev2=history[1];
+  if(Number.isFinite(retain) && prev && prev2 && prev.conversionAvailable && prev2.conversionAvailable){
+    const k1=Number(prev.kpi), k2=Number(prev2.kpi);
+    if(Number.isFinite(k1) && Number.isFinite(k2)){
+      const need=Math.max(0,retain*3-k1-k2);
+      const rev=Number(c.targetRevenue||0)*need/100;
+      retentionValue=rev<=0?'Already covered':`≈ ${money(rev)} this month`;
+    }
+  } else if(s.retentionRevenueNeeded!==undefined && s.retentionRevenueNeeded!==null){
+    retentionValue=Number(s.retentionRevenueNeeded)<=0?'Already covered':`≈ ${money(s.retentionRevenueNeeded)} this month`;
+  }
+  facts.push({label:'Minimum rev before level down',value:retentionValue});
+  $('#levelFacts').innerHTML=facts.map(f=>`<div class="fact"><span>${f.label}</span><strong>${f.value}</strong></div>`).join('');
 
   if(s.nextLevel){
     $('#nextLevelTitle').textContent=`Estimated target to reach ${s.nextLevel}`;
