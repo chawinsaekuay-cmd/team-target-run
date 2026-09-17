@@ -51,10 +51,16 @@ function doGet(e) {
     }));
 
   const suspension = getSuspensionStatus_(ss);
+  const leadQuota = getLeadQuotaStatus_(ss);
   runners.forEach(r => {
-    const s = suspension.byStaffCode[String(r.staffCode || '').trim()];
+    const staffCode = String(r.staffCode || '').trim();
+    const s = suspension.byStaffCode[staffCode];
+    const lq = leadQuota.byStaffCode[staffCode];
     r.suspended = s ? !!s.suspended : false;
     r.suspensionCheckedAt = s ? s.checkedAt : suspension.checkedAt;
+    r.leadQuota = lq ? lq.leadQuota : null;
+    r.leadsReceived = lq ? lq.leadsReceived : null;
+    r.leadQuotaCheckedAt = lq ? lq.checkedAt : leadQuota.checkedAt;
   });
 
   const parsed = selected.parsed;
@@ -93,6 +99,7 @@ function doGet(e) {
     .createTextOutput(JSON.stringify({
       updatedAt: new Date().toISOString(),
       suspensionCheckedAt: suspension.checkedAt,
+      leadQuotaCheckedAt: leadQuota.checkedAt,
       sourceTab: sheet.getName(),
       currentTab: latest.sheet.getName(),
       isCurrentMonth,
@@ -116,6 +123,26 @@ function getSuspensionStatus_(ss) {
     const raw = String(row[4] || '').trim().toLowerCase();
     const suspended = raw === 'true' || raw === 'yes' || raw === '1' || raw === 'suspended';
     result.byStaffCode[staffCode] = { suspended, checkedAt };
+    if (checkedAt && (!result.checkedAt || checkedAt > result.checkedAt)) result.checkedAt = checkedAt;
+  });
+  return result;
+}
+
+function getLeadQuotaStatus_(ss) {
+  const sheet = ss.getSheetByName('Lead Quota Status');
+  const result = { checkedAt:'', byStaffCode:{} };
+  if (!sheet || sheet.getLastRow() < 2) return result;
+
+  const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, Math.min(sheet.getLastColumn(), 6)).getDisplayValues();
+  rows.forEach(row => {
+    const checkedAt = String(row[0] || '').trim();
+    const staffCode = String(row[1] || '').trim();
+    if (!staffCode) return;
+    result.byStaffCode[staffCode] = {
+      leadQuota: toNumber(row[4]),
+      leadsReceived: toNumber(row[5]),
+      checkedAt
+    };
     if (checkedAt && (!result.checkedAt || checkedAt > result.checkedAt)) result.checkedAt = checkedAt;
   });
   return result;
