@@ -98,6 +98,30 @@
     }
     .sales-rank { font-size:22px !important; }
 
+    .suspension-cell { white-space:nowrap; }
+    .suspension-pill {
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width:92px;
+      padding:7px 11px;
+      border-radius:999px;
+      font-size:12px;
+      font-weight:900;
+      letter-spacing:.05em;
+      border:1px solid rgba(255,255,255,.12);
+    }
+    .suspension-pill.active {
+      color:#58e49a;
+      background:rgba(88,228,154,.08);
+      border-color:rgba(88,228,154,.28);
+    }
+    .suspension-pill.suspended {
+      color:#ff8f8f;
+      background:rgba(255,92,92,.10);
+      border-color:rgba(255,92,92,.32);
+    }
+
     /* WFH eligibility is intentionally simple: green WFH, white OFFICE + red gap to target. */
     .wfh-cell { white-space:nowrap; }
     .wfh-earned {
@@ -276,6 +300,7 @@
       .sales-revenue { font-size:17px !important; }
       .sales-deals { font-size:16px !important; }
       .level-pill,.target-pill { font-size:12px !important; padding:6px 9px !important; }
+      .suspension-pill { min-width:78px; padding:6px 9px; font-size:10px; }
       .sales-row.top-1 .sales-rank,
       .sales-row.top-2 .sales-rank,
       .sales-row.top-3 .sales-rank {
@@ -407,6 +432,7 @@
             <tr>
               <th>#</th>
               <th>Sales</th>
+              <th>Suspension</th>
               <th>Level</th>
               <th>Revenue</th>
               <th>Deals</th>
@@ -435,6 +461,41 @@
       new MutationObserver(syncPodiumWinnerEffects).observe(podiumNode,{childList:true,subtree:true,characterData:true});
       syncPodiumWinnerEffects();
     }
+
+    /* Live suspension status from the Suspended Status sheet. */
+    (() => {
+      const board=document.querySelector('#salesBoard');
+      if(!board) return;
+
+      const syncSuspension=() => {
+        const runners=(typeof state!=='undefined' && state.lastGood && Array.isArray(state.lastGood.runners)) ? state.lastGood.runners : [];
+        const byName=new Map(runners.map(r=>[String(r.name||'').trim().toLowerCase(),r]));
+        [...board.querySelectorAll('tr')].forEach(row => {
+          const name=(row.cells[1]?.textContent||'').trim().toLowerCase();
+          const runner=byName.get(name);
+          let cell=row.querySelector('.suspension-cell');
+          if(!cell){
+            cell=row.insertCell(2);
+            cell.className='suspension-cell';
+          }
+          const suspended=!!(runner && runner.suspended);
+          cell.dataset.sort=suspended?'1':'0';
+          const checked=runner?.suspensionCheckedAt || state.lastGood?.suspensionCheckedAt || '';
+          cell.title=checked?`Checked ${checked}`:'';
+          cell.innerHTML=suspended
+            ? '<span class="suspension-pill suspended">SUSPENDED</span>'
+            : '<span class="suspension-pill active">ACTIVE</span>';
+        });
+      };
+
+      let syncing=false;
+      new MutationObserver(() => {
+        if(syncing) return;
+        syncing=true;
+        requestAnimationFrame(() => { syncSuspension(); syncing=false; });
+      }).observe(board,{childList:true});
+      syncSuspension();
+    })();
 
     /* Automatic 4-stage WFH status for the Live Top Sales Board. */
     (() => {
@@ -497,14 +558,14 @@
         const stage=stageForMonth();
         const factor=[0,.25,.5,.75,1][stage];
         [...board.querySelectorAll('tr')].forEach(row => {
-          if(row.cells.length<6) return;
-          let cell=row.cells[6];
+          if(row.cells.length<7) return;
+          let cell=row.querySelector('.wfh-cell');
           if(!cell){
             cell=row.insertCell(-1);
             cell.className='wfh-cell';
           }
-          const level=(row.cells[2]?.textContent||'').trim().toUpperCase().replace(/\s+/g,'');
-          const revenue=moneyFromCell(row.cells[3]);
+          const level=(row.cells[3]?.textContent||'').trim().toUpperCase().replace(/\s+/g,'');
+          const revenue=moneyFromCell(row.cells[4]);
           const monthlyTarget=monthlyTargetByLevel[level];
 
           if(!monthlyTarget){
@@ -541,7 +602,7 @@
       const headers = [...document.querySelectorAll('.sales-table thead th')];
       if (!board || !headers.length) return;
 
-      const sortState = { column:3, direction:'desc' };
+      const sortState = { column:4, direction:'desc' };
       const rankFromCell = cell => {
         const t=(cell?.textContent || '').trim();
         if(t.includes('🥇')) return 1;
@@ -553,8 +614,9 @@
       const valueFor = (row,col) => {
         const cell=row.cells[col];
         if(col===0) return rankFromCell(cell);
-        if(col===3 || col===4 || col===5) return numericFromCell(cell);
-        if(col===6) return Number(cell?.dataset.sort || 0);
+        if(col===2) return Number(cell?.dataset.sort || 0);
+        if(col===4 || col===5 || col===6) return numericFromCell(cell);
+        if(col===7) return Number(cell?.dataset.sort || 0);
         return (cell?.textContent || '').trim().toLowerCase();
       };
       const compare = (a,b,col) => {
@@ -587,7 +649,7 @@
         if(sortState.column===index) sortState.direction=sortState.direction==='asc'?'desc':'asc';
         else {
           sortState.column=index;
-          sortState.direction=(index===0 || index===3 || index===4 || index===5 || index===6)?'desc':'asc';
+          sortState.direction=(index===0 || index===2 || index===4 || index===5 || index===6 || index===7)?'desc':'asc';
         }
         applySort();
       }));
