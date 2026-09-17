@@ -16,7 +16,7 @@
       gap:12px !important;
       max-height:540px;
       overflow-y:auto;
-      padding-right:8px;
+      padding-right:8px !important;
     }
 
     /* Keep the 500 Race scrollers usable but visually blended into the panel. */
@@ -120,6 +120,17 @@
       color:#ff8f8f;
       background:rgba(255,92,92,.10);
       border-color:rgba(255,92,92,.32);
+    }
+    .lead-quota-cell {
+      white-space:nowrap;
+      font-weight:900;
+      letter-spacing:.02em;
+      color:#f4f7fb;
+    }
+    .lead-quota-cell .lead-quota-value {
+      display:inline-block;
+      min-width:54px;
+      text-align:center;
     }
 
     /* WFH eligibility is intentionally simple: green WFH, white OFFICE + red gap to target. */
@@ -301,6 +312,7 @@
       .sales-deals { font-size:16px !important; }
       .level-pill,.target-pill { font-size:12px !important; padding:6px 9px !important; }
       .suspension-pill { min-width:78px; padding:6px 9px; font-size:10px; }
+      .lead-quota-cell { font-size:14px !important; }
       .sales-row.top-1 .sales-rank,
       .sales-row.top-2 .sales-rank,
       .sales-row.top-3 .sales-rank {
@@ -433,6 +445,7 @@
               <th>#</th>
               <th>Sales</th>
               <th>Suspension</th>
+              <th>Lead Received</th>
               <th>Level</th>
               <th>Revenue</th>
               <th>Deals</th>
@@ -462,29 +475,46 @@
       syncPodiumWinnerEffects();
     }
 
-    /* Live suspension status from the Suspended Status sheet. */
+    /* Live suspension + lead quota status from the Team Records helper tabs. */
     (() => {
       const board=document.querySelector('#salesBoard');
       if(!board) return;
 
-      const syncSuspension=() => {
+      const syncLiveOps=() => {
         const runners=(typeof state!=='undefined' && state.lastGood && Array.isArray(state.lastGood.runners)) ? state.lastGood.runners : [];
         const byName=new Map(runners.map(r=>[String(r.name||'').trim().toLowerCase(),r]));
         [...board.querySelectorAll('tr')].forEach(row => {
           const name=(row.cells[1]?.textContent||'').trim().toLowerCase();
           const runner=byName.get(name);
-          let cell=row.querySelector('.suspension-cell');
-          if(!cell){
-            cell=row.insertCell(2);
-            cell.className='suspension-cell';
+
+          let suspensionCell=row.querySelector('.suspension-cell');
+          if(!suspensionCell){
+            suspensionCell=row.insertCell(2);
+            suspensionCell.className='suspension-cell';
           }
           const suspended=!!(runner && runner.suspended);
-          cell.dataset.sort=suspended?'1':'0';
-          const checked=runner?.suspensionCheckedAt || state.lastGood?.suspensionCheckedAt || '';
-          cell.title=checked?`Checked ${checked}`:'';
-          cell.innerHTML=suspended
+          suspensionCell.dataset.sort=suspended?'1':'0';
+          const suspensionChecked=runner?.suspensionCheckedAt || state.lastGood?.suspensionCheckedAt || '';
+          suspensionCell.title=suspensionChecked?`Checked ${suspensionChecked}`:'';
+          suspensionCell.innerHTML=suspended
             ? '<span class="suspension-pill suspended">SUSPENDED</span>'
             : '<span class="suspension-pill active">ACTIVE</span>';
+
+          let leadCell=row.querySelector('.lead-quota-cell');
+          if(!leadCell){
+            leadCell=row.insertCell(3);
+            leadCell.className='lead-quota-cell';
+          }
+          const received=runner?.leadsReceived;
+          const quota=runner?.leadQuota;
+          const hasLeadData=received!==null && received!==undefined && quota!==null && quota!==undefined;
+          const ratio=hasLeadData && Number(quota)>0 ? Number(received)/Number(quota) : -1;
+          leadCell.dataset.sort=String(ratio);
+          const leadChecked=runner?.leadQuotaCheckedAt || state.lastGood?.leadQuotaCheckedAt || '';
+          leadCell.title=leadChecked?`Checked ${leadChecked}`:'';
+          leadCell.innerHTML=hasLeadData
+            ? `<span class="lead-quota-value">${Number(received)}/${Number(quota)}</span>`
+            : '<span class="lead-quota-value">—</span>';
         });
       };
 
@@ -492,9 +522,9 @@
       new MutationObserver(() => {
         if(syncing) return;
         syncing=true;
-        requestAnimationFrame(() => { syncSuspension(); syncing=false; });
+        requestAnimationFrame(() => { syncLiveOps(); syncing=false; });
       }).observe(board,{childList:true});
-      syncSuspension();
+      syncLiveOps();
     })();
 
     /* Automatic 4-stage WFH status for the Live Top Sales Board. */
@@ -558,14 +588,14 @@
         const stage=stageForMonth();
         const factor=[0,.25,.5,.75,1][stage];
         [...board.querySelectorAll('tr')].forEach(row => {
-          if(row.cells.length<7) return;
+          if(row.cells.length<8) return;
           let cell=row.querySelector('.wfh-cell');
           if(!cell){
             cell=row.insertCell(-1);
             cell.className='wfh-cell';
           }
-          const level=(row.cells[3]?.textContent||'').trim().toUpperCase().replace(/\s+/g,'');
-          const revenue=moneyFromCell(row.cells[4]);
+          const level=(row.cells[4]?.textContent||'').trim().toUpperCase().replace(/\s+/g,'');
+          const revenue=moneyFromCell(row.cells[5]);
           const monthlyTarget=monthlyTargetByLevel[level];
 
           if(!monthlyTarget){
@@ -602,7 +632,7 @@
       const headers = [...document.querySelectorAll('.sales-table thead th')];
       if (!board || !headers.length) return;
 
-      const sortState = { column:4, direction:'desc' };
+      const sortState = { column:5, direction:'desc' };
       const rankFromCell = cell => {
         const t=(cell?.textContent || '').trim();
         if(t.includes('🥇')) return 1;
@@ -614,9 +644,9 @@
       const valueFor = (row,col) => {
         const cell=row.cells[col];
         if(col===0) return rankFromCell(cell);
-        if(col===2) return Number(cell?.dataset.sort || 0);
-        if(col===4 || col===5 || col===6) return numericFromCell(cell);
-        if(col===7) return Number(cell?.dataset.sort || 0);
+        if(col===2 || col===3) return Number(cell?.dataset.sort || 0);
+        if(col===5 || col===6 || col===7) return numericFromCell(cell);
+        if(col===8) return Number(cell?.dataset.sort || 0);
         return (cell?.textContent || '').trim().toLowerCase();
       };
       const compare = (a,b,col) => {
@@ -649,7 +679,7 @@
         if(sortState.column===index) sortState.direction=sortState.direction==='asc'?'desc':'asc';
         else {
           sortState.column=index;
-          sortState.direction=(index===0 || index===2 || index===4 || index===5 || index===6 || index===7)?'desc':'asc';
+          sortState.direction=(index===0 || index===2 || index===3 || index===5 || index===6 || index===7 || index===8)?'desc':'asc';
         }
         applySort();
       }));
