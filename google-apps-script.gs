@@ -8,27 +8,25 @@
  *
  * Historical browsing starts from September 2026 onward.
  * The API defaults to the latest month, but also accepts ?month=TPSep2026.
- *
- * Race logic:
- * - First time someone reaches 100%, that original finish is permanently recorded.
- * - They only keep an active podium position while their current achievement stays >=100%.
- * - If a broken deal drops them below 100%, they lose the active podium position and the
- *   remaining qualified finishers move up.
- * - If they later reach 100% again, they re-qualify at that later time and go behind people
- *   who remained qualified. Original first-finish history is never deleted.
  */
 function doGet(e) {
+  const requestedMonth = String(e && e.parameter && e.parameter.month || '').trim();
+  const scriptCache = CacheService.getScriptCache();
+  const responseCacheKey = `leaderboard:response:v3:${requestedMonth || 'latest'}`;
+  const cachedResponse = scriptCache.get(responseCacheKey);
+  if (cachedResponse) return jsonOutput_(cachedResponse);
+
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const monthlySheets = getMonthlySheets_(ss);
   if (!monthlySheets.length) throw new Error('No monthly TP tab found from September 2026 onward.');
 
   const latest = monthlySheets[0];
-  const requestedMonth = String(e && e.parameter && e.parameter.month || '').trim();
   const selected = monthlySheets.find(item => item.sheet.getName() === requestedMonth) || latest;
   const sheet = selected.sheet;
   const isCurrentMonth = sheet.getName() === latest.sheet.getName();
 
-  const values = sheet.getRange(7, 1, Math.max(sheet.getLastRow() - 6, 1), 17).getDisplayValues();
+  const rowCount = Math.max(sheet.getLastRow() - 6, 1);
+  const values = sheet.getRange(7, 1, rowCount, 17).getDisplayValues();
 
   const runners = values
     .filter(row => {
@@ -65,7 +63,7 @@ function doGet(e) {
 
   const parsed = selected.parsed;
   const finishMap = isCurrentMonth
-    ? syncFinishLog_(ss, sheet.getName(), parsed, runners)
+    ? getCurrentFinishMap_(ss, sheet.getName(), parsed, runners)
     : getFinishLog_(ss, sheet.getName());
 
   runners.forEach(r => {
@@ -95,22 +93,34 @@ function doGet(e) {
     isCurrent: item.sheet.getName() === latest.sheet.getName()
   }));
 
+  const payload = JSON.stringify({
+    updatedAt: new Date().toISOString(),
+    suspensionCheckedAt: suspension.checkedAt,
+    leadQuotaCheckedAt: leadQuota.checkedAt,
+    sourceTab: sheet.getName(),
+    currentTab: latest.sheet.getName(),
+    isCurrentMonth,
+    monthLabel: `${parsed.monthName} ${parsed.year}`,
+    availableMonths,
+    runners
+  });
+
+  scriptCache.put(responseCacheKey, payload, 5);
+  return jsonOutput_(payload);
+}
+
+function jsonOutput_(payload) {
   return ContentService
-    .createTextOutput(JSON.stringify({
-      updatedAt: new Date().toISOString(),
-      suspensionCheckedAt: suspension.checkedAt,
-      leadQuotaCheckedAt: leadQuota.checkedAt,
-      sourceTab: sheet.getName(),
-      currentTab: latest.sheet.getName(),
-      isCurrentMonth,
-      monthLabel: `${parsed.monthName} ${parsed.year}`,
-      availableMonths,
-      runners
-    }))
+    .createTextOutput(payload)
     .setMimeType(ContentService.MimeType.JSON);
 }
 
 function getSuspensionStatus_(ss) {
+  const cache = CacheService.getScriptCache();
+  const cacheKey = 'leaderboard:suspension:v2';
+  const cached = cache.get(cacheKey);
+  if (cached) return JSON.parse(cached);
+
   const sheet = ss.getSheetByName('Suspended Status');
   const result = { checkedAt:'', byStaffCode:{} };
   if (!sheet || sheet.getLastRow() < 2) return result;
@@ -125,10 +135,16 @@ function getSuspensionStatus_(ss) {
     result.byStaffCode[staffCode] = { suspended, checkedAt };
     if (checkedAt && (!result.checkedAt || checkedAt > result.checkedAt)) result.checkedAt = checkedAt;
   });
+  cache.put(cacheKey, JSON.stringify(result), 30);
   return result;
 }
 
 function getLeadQuotaStatus_(ss) {
+  const cache = CacheService.getScriptCache();
+  const cacheKey = 'leaderboard:lead-quota:v2';
+  const cached = cache.get(cacheKey);
+  if (cached) return JSON.parse(cached);
+
   const sheet = ss.getSheetByName('Lead Quota Status');
   const result = { checkedAt:'', byStaffCode:{} };
   if (!sheet || sheet.getLastRow() < 2) return result;
@@ -145,7 +161,32 @@ function getLeadQuotaStatus_(ss) {
     };
     if (checkedAt && (!result.checkedAt || checkedAt > result.checkedAt)) result.checkedAt = checkedAt;
   });
+  cache.put(cacheKey, JSON.stringify(result), 30);
   return result;
+}
+
+function getCurrentFinishMap_(ss, sourceTab, parsed, runners) {
+  const cache = CacheService.getScriptCache();
+  const signature = runners
+    .map(r => `${raceKey_(r)}:${Number(r.achievement) >= 100 ? 1 : 0}`)
+    .sort()
+    .join('|');
+  const sigKey = `leaderboard:race-sig:v2:${sourceTab}`;
+  const mapKey = `leaderboard:race-map:v2:${sourceTab}`;
+  const previousSignature = cache.get(sigKey);
+
+  if (previousSignature === signature) {
+    const cachedMap = cache.get(mapKey);
+    if (cachedMap) return JSON.parse(cachedMap);
+    const currentMap = getFinishLog_(ss, sourceTab);
+    cache.put(mapKey, JSON.stringify(currentMap), 21600);
+    return currentMap;
+  }
+
+  const syncedMap = syncFinishLog_(ss, sourceTab, parsed, runners);
+  cache.put(sigKey, signature, 21600);
+  cache.put(mapKey, JSON.stringify(syncedMap), 21600);
+  return syncedMap;
 }
 
 function ensureFinishLog_(ss) {
@@ -160,7 +201,6 @@ function ensureFinishLog_(ss) {
     return log;
   }
 
-  // Upgrade older 8-column logs in place without losing history.
   if (log.getMaxColumns() < 10) log.insertColumnsAfter(log.getMaxColumns(), 10 - log.getMaxColumns());
   const headers = log.getRange(1, 1, 1, 10).getValues()[0];
   const wanted = [
@@ -257,7 +297,6 @@ function syncFinishLog_(ss, sourceTab, parsed, runners) {
       gorn: { place: 2, finishDate: '13 Sep 2026', daysToFinish: 13, iso: '2026-09-13T12:00:00+07:00' }
     } : {};
 
-    // Preserve user-confirmed first-finish history for September 2026.
     runners.forEach(r => {
       const override = manualFinish[String(r.name || '').trim().toLowerCase()];
       if (!override) return;
@@ -289,7 +328,6 @@ function syncFinishLog_(ss, sourceTab, parsed, runners) {
     const daysToFinish = parsed ? getRaceDay_(now, parsed.year, parsed.monthIndex, tz) : '';
     const newRows = [];
 
-    // First-time finishers: permanently record their original finish event.
     runners
       .filter(r => r.achievement >= 100 && !current[raceKey_(r)])
       .sort((a,b) => {
@@ -331,9 +369,6 @@ function syncFinishLog_(ss, sourceTab, parsed, runners) {
 
     if (newRows.length) log.getRange(log.getLastRow() + 1, 1, newRows.length, 10).setValues(newRows);
 
-    // Broken-deal rule: qualification is live. Dropping below 100 removes the active podium spot.
-    // Crossing back to 100 later gets a fresh active qualification time, so they re-enter behind
-    // everyone who stayed qualified.
     runners.forEach(r => {
       const key = raceKey_(r);
       const record = current[key];
@@ -405,7 +440,7 @@ function getRaceDay_(date, year, monthIndex, timezone) {
 }
 
 function getMonthlySheets_(ss) {
-  const historyStartKey = 2026 * 12 + 8; // September 2026
+  const historyStartKey = 2026 * 12 + 8;
   return ss.getSheets()
     .map(sheet => {
       const parsed = parseMonthlyTab_(sheet.getName());
