@@ -49,6 +49,7 @@ function ordinal(rank){
   if(n%10===3) return `${n}rd`;
   return `${n}th`;
 }
+function escapeHtml(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])); }
 
 function installStadiumTweaks(){
   if(document.querySelector('#stadiumTweaks')) return;
@@ -60,104 +61,50 @@ function installStadiumTweaks(){
     .stadium-runner:hover,.stadium-runner.tap-active{z-index:999 !important;}
     .stadium-runner:hover .stadium-nameplate,.stadium-runner.tap-active .stadium-nameplate{transform:translateY(-2px) scale(1.05);filter:brightness(1.08);box-shadow:0 14px 34px rgba(0,0,0,.55),0 0 0 2px rgba(255,255,255,.45) !important;}
     .finish-line{width:60px !important;}
-
-    .checkpoint{
-      font-size:28px !important;
-      font-weight:900 !important;
-      color:rgba(235,239,245,.72) !important;
-      background:rgba(96,103,116,.30) !important;
-      border:1px solid rgba(255,255,255,.14) !important;
-      padding:8px 13px !important;
-      backdrop-filter:blur(3px);
-      -webkit-backdrop-filter:blur(3px);
-      box-shadow:none !important;
-    }
+    .checkpoint{font-size:28px !important;font-weight:900 !important;color:rgba(235,239,245,.72) !important;background:rgba(96,103,116,.30) !important;border:1px solid rgba(255,255,255,.14) !important;padding:8px 13px !important;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);box-shadow:none !important;}
     .checkpoint-25{left:auto !important;right:1% !important;top:50% !important;transform:translate(50%,-50%) !important;}
     .checkpoint-75{right:auto !important;left:1% !important;top:50% !important;transform:translate(-50%,-50%) !important;}
     .checkpoint-100{color:rgba(235,239,245,.72) !important;}
-
-    .mini-race-board{
-      max-height:430px;
-      overflow-y:auto;
-      overflow-x:hidden;
-      padding-right:18px !important;
-      margin-right:2px;
-      scrollbar-gutter:stable;
-    }
+    .mini-race-board{max-height:430px;overflow-y:auto;overflow-x:hidden;padding-right:18px !important;margin-right:2px;scrollbar-gutter:stable;}
     .mini-race-board::-webkit-scrollbar{width:8px;}
     .mini-race-board::-webkit-scrollbar-track{background:rgba(255,255,255,.035);border-radius:999px;}
     .mini-race-board::-webkit-scrollbar-thumb{background:rgba(255,255,255,.20);border-radius:999px;}
-
-    .podium-grid{
-      display:grid;
-      grid-template-columns:repeat(3,minmax(0,1fr));
-      gap:14px;
-      margin-bottom:16px;
-      align-items:stretch;
-    }
+    .podium-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:16px;align-items:stretch;}
     .podium-grid .podium-card{margin-bottom:0 !important;min-width:0;}
-    .sales-podium-card .podium,
-    .deal-podium-card .podium{gap:10px !important;padding-left:8px !important;padding-right:8px !important;}
-    .sales-podium-card .podium-slot,
-    .deal-podium-card .podium-slot{width:min(170px,31%);}
-    .sales-podium-card .podium-medal,
-    .deal-podium-card .podium-medal{font-size:54px !important;}
-    .sales-podium-card .podium-name,
-    .deal-podium-card .podium-name{font-size:30px !important;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-    .sales-podium-card .podium-slot.first .podium-name,
-    .deal-podium-card .podium-slot.first .podium-name{font-size:34px !important;}
+    .sales-podium-card .podium,.deal-podium-card .podium{gap:10px !important;padding-left:8px !important;padding-right:8px !important;}
+    .sales-podium-card .podium-slot,.deal-podium-card .podium-slot{width:min(170px,31%);}
+    .sales-podium-card .podium-medal,.deal-podium-card .podium-medal{font-size:54px !important;}
+    .sales-podium-card .podium-name,.deal-podium-card .podium-name{font-size:30px !important;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .sales-podium-card .podium-slot.first .podium-name,.deal-podium-card .podium-slot.first .podium-name{font-size:34px !important;}
     .deal-podium-card .podium-name.joint-name{white-space:normal !important;overflow:visible !important;text-overflow:clip !important;line-height:1.05;text-wrap:balance;}
     .deal-podium-card .joint-badge{margin-top:5px;font-size:10px;font-weight:900;letter-spacing:.12em;color:#8ee7ff;text-transform:uppercase;}
-    .sales-podium-card .podium-days,
-    .deal-podium-card .podium-days{font-size:18px !important;white-space:nowrap;}
-    .sales-podium-card .podium-slot.winner .podium-person,
-    .deal-podium-card .podium-slot.winner .podium-person{animation:none !important;}
-    .sales-podium-card .podium-slot.winner::before,
-    .sales-podium-card .podium-slot.winner::after,
-    .deal-podium-card .podium-slot.winner::before,
-    .deal-podium-card .podium-slot.winner::after{display:none !important;content:none !important;}
-
+    .sales-podium-card .podium-days,.deal-podium-card .podium-days{font-size:18px !important;white-space:nowrap;}
+    .sales-podium-card .podium-slot.winner .podium-person,.deal-podium-card .podium-slot.winner .podium-person{animation:none !important;}
+    .sales-podium-card .podium-slot.winner::before,.sales-podium-card .podium-slot.winner::after,.deal-podium-card .podium-slot.winner::before,.deal-podium-card .podium-slot.winner::after{display:none !important;content:none !important;}
     @media (max-width:1450px){
       .podium-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);}
       .podium-grid .deal-podium-card{grid-column:1 / -1;}
-      .sales-podium-card .podium-slot,
-      .deal-podium-card .podium-slot{width:min(190px,30%);}
-      .sales-podium-card .podium-medal,
-      .deal-podium-card .podium-medal{font-size:62px !important;}
-      .sales-podium-card .podium-name,
-      .deal-podium-card .podium-name{font-size:36px !important;}
-      .sales-podium-card .podium-slot.first .podium-name,
-      .deal-podium-card .podium-slot.first .podium-name{font-size:40px !important;}
-      .sales-podium-card .podium-days,
-      .deal-podium-card .podium-days{font-size:19px !important;}
+      .sales-podium-card .podium-slot,.deal-podium-card .podium-slot{width:min(190px,30%);}
+      .sales-podium-card .podium-medal,.deal-podium-card .podium-medal{font-size:62px !important;}
+      .sales-podium-card .podium-name,.deal-podium-card .podium-name{font-size:36px !important;}
+      .sales-podium-card .podium-slot.first .podium-name,.deal-podium-card .podium-slot.first .podium-name{font-size:40px !important;}
+      .sales-podium-card .podium-days,.deal-podium-card .podium-days{font-size:19px !important;}
     }
-
     @media (max-width:1100px){
       .podium-grid{grid-template-columns:1fr;}
       .podium-grid .deal-podium-card{grid-column:auto;}
-      .sales-podium-card .podium-slot,
-      .deal-podium-card .podium-slot{width:min(210px,27vw);}
-      .sales-podium-card .podium-medal,
-      .deal-podium-card .podium-medal{font-size:72px !important;}
-      .sales-podium-card .podium-name,
-      .deal-podium-card .podium-name{font-size:42px !important;}
-      .sales-podium-card .podium-slot.first .podium-name,
-      .deal-podium-card .podium-slot.first .podium-name{font-size:46px !important;}
-      .sales-podium-card .podium-days,
-      .deal-podium-card .podium-days{font-size:23px !important;}
+      .sales-podium-card .podium-slot,.deal-podium-card .podium-slot{width:min(210px,27vw);}
+      .sales-podium-card .podium-medal,.deal-podium-card .podium-medal{font-size:72px !important;}
+      .sales-podium-card .podium-name,.deal-podium-card .podium-name{font-size:42px !important;}
+      .sales-podium-card .podium-slot.first .podium-name,.deal-podium-card .podium-slot.first .podium-name{font-size:46px !important;}
+      .sales-podium-card .podium-days,.deal-podium-card .podium-days{font-size:23px !important;}
     }
-
     @media (max-width:900px){
       .checkpoint{font-size:18px !important;padding:6px 9px !important;}
-      .sales-podium-card .podium-medal,
-      .deal-podium-card .podium-medal{font-size:48px !important;}
-      .sales-podium-card .podium-name,
-      .sales-podium-card .podium-slot.first .podium-name,
-      .deal-podium-card .podium-name,
-      .deal-podium-card .podium-slot.first .podium-name{font-size:24px !important;}
+      .sales-podium-card .podium-medal,.deal-podium-card .podium-medal{font-size:48px !important;}
+      .sales-podium-card .podium-name,.sales-podium-card .podium-slot.first .podium-name,.deal-podium-card .podium-name,.deal-podium-card .podium-slot.first .podium-name{font-size:24px !important;}
       .deal-podium-card .joint-badge{font-size:8px;}
-      .sales-podium-card .podium-days,
-      .deal-podium-card .podium-days{font-size:14px !important;}
+      .sales-podium-card .podium-days,.deal-podium-card .podium-days{font-size:14px !important;}
     }
   `;
   document.head.appendChild(style);
@@ -167,7 +114,6 @@ function installSalesPodium(){
   if(document.querySelector('#salesPodium')) return;
   const raceCard=document.querySelector('.podium-card');
   if(!raceCard || !raceCard.parentNode) return;
-
   const grid=document.createElement('section');
   grid.className='podium-grid';
   raceCard.parentNode.insertBefore(grid,raceCard);
@@ -176,24 +122,14 @@ function installSalesPodium(){
   const salesCard=document.createElement('section');
   salesCard.className='podium-card sales-podium-card';
   salesCard.innerHTML=`
-    <div class="section-heading">
-      <div>
-        <div class="section-title">💰 Top Sales Podium</div>
-        <div class="section-note">Current top 3 by revenue · changes live</div>
-      </div>
-    </div>
+    <div class="section-heading"><div><div class="section-title">💰 Top Sales Podium</div><div class="section-note">Current top 3 by revenue · changes live</div></div></div>
     <div id="salesPodium" class="podium"></div>`;
   grid.appendChild(salesCard);
 
   const dealCard=document.createElement('section');
   dealCard.className='podium-card deal-podium-card';
   dealCard.innerHTML=`
-    <div class="section-heading">
-      <div>
-        <div class="section-title">🤝 Top Deals Podium</div>
-        <div class="section-note">Top 3 deal totals · joint positions share the podium</div>
-      </div>
-    </div>
+    <div class="section-heading"><div><div class="section-title">🤝 Top Deals Podium</div><div class="section-note">Top 3 deal totals · joint positions share the podium</div></div></div>
     <div id="dealPodium" class="podium"></div>`;
   grid.appendChild(dealCard);
 }
@@ -202,7 +138,6 @@ function installMonthSelector(){
   if(document.querySelector('#monthSelector')) return;
   const actions=document.querySelector('.top-actions');
   if(!actions) return;
-
   const wrap=document.createElement('label');
   wrap.className='month-select-wrap';
   wrap.innerHTML=`<span>MONTH</span><select id="monthSelector" aria-label="Choose dashboard month"><option>Loading…</option></select>`;
@@ -225,7 +160,6 @@ function installMonthSelector(){
     state.previousAchievements.clear();
     state.initialized=false;
     state.lastGood=null;
-
     const url=new URL(window.location.href);
     if(state.selectedMonth && state.selectedMonth!==state.currentMonthTab) url.searchParams.set('month',state.selectedMonth);
     else url.searchParams.delete('month');
@@ -237,18 +171,14 @@ function installMonthSelector(){
 function updateMonthSelector(data){
   const select=document.querySelector('#monthSelector');
   if(!select) return;
-
   const months=Array.isArray(data.availableMonths)&&data.availableMonths.length
     ? data.availableMonths
     : [{tab:data.sourceTab||'',label:data.monthLabel||data.sourceTab||'Current Month',isCurrent:true}];
-
   state.availableMonths=months;
   state.currentMonthTab=data.currentTab || (months.find(m=>m.isCurrent)||{}).tab || data.sourceTab || '';
   if(!state.selectedMonth || !months.some(m=>m.tab===state.selectedMonth)) state.selectedMonth=data.sourceTab || state.currentMonthTab;
-
   select.innerHTML=months.map(m=>`<option value="${escapeHtml(m.tab)}">${escapeHtml(m.label)}${m.isCurrent?' · LIVE':''}</option>`).join('');
   select.value=data.sourceTab || state.selectedMonth;
-
   const liveStatus=document.querySelector('#liveStatus');
   const historical=data.isCurrentMonth===false || (state.currentMonthTab && data.sourceTab!==state.currentMonthTab);
   document.body.classList.toggle('history-mode',historical);
@@ -256,7 +186,7 @@ function updateMonthSelector(data){
 }
 
 function normalize(payload){
-  const runners = (payload.runners || []).map(r => ({
+  const runners=(payload.runners||[]).map(r=>({
     ...r,
     achievement:Number(r.achievement)||0,
     finishPlace:Number(r.finishPlace)||0,
@@ -265,7 +195,6 @@ function normalize(payload){
     deals:Number(r.deals)||0,
     targetRevenue:Number(r.targetRevenue)||0
   }));
-
   runners.sort((a,b)=>{
     if(a.finishPlace && b.finishPlace) return a.finishPlace-b.finishPlace;
     if(a.finishPlace) return -1;
@@ -282,7 +211,7 @@ function renderKpis(data){
   const totalTarget=rs.reduce((s,r)=>s+r.targetRevenue,0);
   const totalDeals=rs.reduce((s,r)=>s+r.deals,0);
   const avg=rs.length?rs.reduce((s,r)=>s+r.achievement,0)/rs.length:0;
-  document.querySelector('#kpiGrid').innerHTML = [
+  document.querySelector('#kpiGrid').innerHTML=[
     ['Team Revenue',`฿${money(totalRevenue)}`],
     ['Total Target',`฿${money(totalTarget)}`],
     ['Total Deals',money(totalDeals)],
@@ -296,147 +225,85 @@ function renderPodium(data){
   const finishers=[...data.runners].filter(r=>r.finishPlace>0).sort((a,b)=>a.finishPlace-b.finishPlace);
   const byPlace=new Map(finishers.map(r=>[r.finishPlace,r]));
   const order=[2,1,3];
-
   podium.innerHTML=order.map(place=>{
     const r=byPlace.get(place);
     const cls=place===1?'first':place===2?'second':'third';
     const name=r?escapeHtml(r.name):'—';
     const days=r&&r.finishDays?`${r.finishDays} day${r.finishDays===1?'':'s'} to finish`:'Waiting for finisher';
-    return `<div class="podium-slot ${cls}">
-      <div class="podium-person">
-        <div class="podium-medal">${medal(place)}</div>
-        <div class="podium-name">${name}</div>
-        <div class="podium-days">${days}</div>
-      </div>
-      <div class="podium-block"><span>${place}</span><small>${ordinal(place)} PLACE</small></div>
-    </div>`;
+    return `<div class="podium-slot ${cls}"><div class="podium-person"><div class="podium-medal">${medal(place)}</div><div class="podium-name">${name}</div><div class="podium-days">${days}</div></div><div class="podium-block"><span>${place}</span><small>${ordinal(place)} PLACE</small></div></div>`;
   }).join('');
 }
 
 function renderSalesPodium(data){
   const podium=document.querySelector('#salesPodium');
   if(!podium) return;
-  const ranked=[...data.runners]
-    .sort((a,b)=>b.revenue-a.revenue || b.deals-a.deals || a.name.localeCompare(b.name))
-    .slice(0,3);
+  const ranked=[...data.runners].sort((a,b)=>b.revenue-a.revenue || b.deals-a.deals || a.name.localeCompare(b.name)).slice(0,3);
   const byPlace=new Map(ranked.map((r,i)=>[i+1,r]));
   const order=[2,1,3];
-
   podium.innerHTML=order.map(place=>{
     const r=byPlace.get(place);
     const cls=place===1?'first':place===2?'second':'third';
     const name=r?escapeHtml(r.name):'—';
     const detail=r?`฿${money(r.revenue)}`:'Waiting for sales';
-    return `<div class="podium-slot ${cls}">
-      <div class="podium-person">
-        <div class="podium-medal">${medal(place)}</div>
-        <div class="podium-name">${name}</div>
-        <div class="podium-days">${detail}</div>
-      </div>
-      <div class="podium-block"><span>${place}</span><small>${ordinal(place)} PLACE</small></div>
-    </div>`;
+    return `<div class="podium-slot ${cls}"><div class="podium-person"><div class="podium-medal">${medal(place)}</div><div class="podium-name">${name}</div><div class="podium-days">${detail}</div></div><div class="podium-block"><span>${place}</span><small>${ordinal(place)} PLACE</small></div></div>`;
   }).join('');
 }
 
 function renderDealPodium(data){
   const podium=document.querySelector('#dealPodium');
   if(!podium) return;
-
   const sorted=[...data.runners].sort((a,b)=>b.deals-a.deals || b.revenue-a.revenue || a.name.localeCompare(b.name));
   const dealTotals=[...new Set(sorted.map(r=>r.deals))].sort((a,b)=>b-a).slice(0,3);
-  const groups=new Map(dealTotals.map((deals,i)=>[
-    i+1,
-    sorted.filter(r=>r.deals===deals)
-  ]));
+  const groups=new Map(dealTotals.map((deals,i)=>[i+1,sorted.filter(r=>r.deals===deals)]));
   const order=[2,1,3];
-
   podium.innerHTML=order.map(place=>{
-    const group=groups.get(place) || [];
+    const group=groups.get(place)||[];
     const cls=place===1?'first':place===2?'second':'third';
     const hasTie=group.length>1;
-    const names=group.length ? group.map(r=>escapeHtml(r.name)).join(' / ') : '—';
-    const deals=group.length ? group[0].deals : null;
-    const detail=deals!=null ? `${money(deals)} deal${deals===1?'':'s'}` : 'Waiting for deals';
-    const joint=hasTie ? `<div class="joint-badge">JOINT ${ordinal(place)} · ${group.length} PEOPLE</div>` : '';
-    return `<div class="podium-slot ${cls}">
-      <div class="podium-person">
-        <div class="podium-medal">${medal(place)}</div>
-        <div class="podium-name${hasTie?' joint-name':''}">${names}</div>
-        ${joint}
-        <div class="podium-days">${detail}</div>
-      </div>
-      <div class="podium-block"><span>${place}</span><small>${hasTie?'JOINT ':''}${ordinal(place)} PLACE</small></div>
-    </div>`;
+    const names=group.length?group.map(r=>escapeHtml(r.name)).join(' / '):'—';
+    const deals=group.length?group[0].deals:null;
+    const detail=deals!=null?`${money(deals)} deal${deals===1?'':'s'}`:'Waiting for deals';
+    const joint=hasTie?`<div class="joint-badge">JOINT ${ordinal(place)} · ${group.length} PEOPLE</div>`:'';
+    return `<div class="podium-slot ${cls}"><div class="podium-person"><div class="podium-medal">${medal(place)}</div><div class="podium-name${hasTie?' joint-name':''}">${names}</div>${joint}<div class="podium-days">${detail}</div></div><div class="podium-block"><span>${place}</span><small>${hasTie?'JOINT ':''}${ordinal(place)} PLACE</small></div></div>`;
   }).join('');
 }
 
 function stadiumPosition(progress){
   const p=Math.max(0,Math.min(100,Number(progress)||0))/100;
-  const xLeft=20;
-  const xRight=80;
-  const yTop=10;
-  const yBottom=90;
-  const centerY=50;
-  const rx=20;
-  const ry=40;
-  const aspect=1.92;
+  const xLeft=20,xRight=80,yTop=10,yBottom=90,centerY=50,rx=20,ry=40,aspect=1.92;
   const straight=(xRight-xLeft)/100*aspect;
   const radius=ry/100;
   const semicircle=Math.PI*radius;
   const total=2*straight+2*semicircle;
   let distance=p*total;
   const halfStraight=straight/2;
-
-  if(distance<=halfStraight){
-    const t=distance/halfStraight;
-    return {x:50+(xRight-50)*t,y:yBottom};
-  }
+  if(distance<=halfStraight){const t=distance/halfStraight;return{x:50+(xRight-50)*t,y:yBottom};}
   distance-=halfStraight;
-
-  if(distance<=semicircle){
-    const t=distance/semicircle;
-    const theta=(90-180*t)*Math.PI/180;
-    return {x:xRight+rx*Math.cos(theta),y:centerY+ry*Math.sin(theta)};
-  }
+  if(distance<=semicircle){const t=distance/semicircle;const theta=(90-180*t)*Math.PI/180;return{x:xRight+rx*Math.cos(theta),y:centerY+ry*Math.sin(theta)};}
   distance-=semicircle;
-
-  if(distance<=straight){
-    const t=distance/straight;
-    return {x:xRight+(xLeft-xRight)*t,y:yTop};
-  }
+  if(distance<=straight){const t=distance/straight;return{x:xRight+(xLeft-xRight)*t,y:yTop};}
   distance-=straight;
-
-  if(distance<=semicircle){
-    const t=distance/semicircle;
-    const theta=(270-180*t)*Math.PI/180;
-    return {x:xLeft+rx*Math.cos(theta),y:centerY+ry*Math.sin(theta)};
-  }
+  if(distance<=semicircle){const t=distance/semicircle;const theta=(270-180*t)*Math.PI/180;return{x:xLeft+rx*Math.cos(theta),y:centerY+ry*Math.sin(theta)};}
   distance-=semicircle;
-
   const t=Math.min(1,distance/halfStraight);
-  return {x:xLeft+(50-xLeft)*t,y:yBottom};
+  return{x:xLeft+(50-xLeft)*t,y:yBottom};
 }
 
 function renderStadium(data){
   const container=document.querySelector('#stadiumRunners');
   if(!container) return;
   const finishers=data.runners.filter(r=>r.finishPlace>0);
-
   container.innerHTML=data.runners.map((r,i)=>{
     const color=colors[i%colors.length];
     const capped=Math.min(100,r.achievement);
     const pos=stadiumPosition(capped);
     const finished=Boolean(r.finishPlace);
-    const finishIndex=finished ? finishers.findIndex(f=>f.name===r.name) : -1;
-    const finishOffset=finished ? ((finishIndex%5)-2)*24 : ((i%3)-1)*7;
-    const label=finished ? `${ordinal(r.finishPlace)} · ${escapeHtml(r.name)}` : escapeHtml(r.name);
-    const status=finished ? `${r.finishDays || ''}${r.finishDays?'d':''}` : `${Math.round(capped)}%`;
-    return `<div class="stadium-runner ${finished?'finished':''}" style="left:${pos.x}%;top:${pos.y}%;--runner:${color};--offset:${finishOffset}px" title="${escapeHtml(r.name)} · ${pct(r.achievement)}">
-      <div class="stadium-runner-icon">🏃</div>
-      <div class="stadium-nameplate"><strong>${label}</strong><span>${status}</span></div>
-    </div>`;
+    const finishIndex=finished?finishers.findIndex(f=>f.name===r.name):-1;
+    const finishOffset=finished?((finishIndex%5)-2)*24:((i%3)-1)*7;
+    const label=finished?`${ordinal(r.finishPlace)} · ${escapeHtml(r.name)}`:escapeHtml(r.name);
+    const status=finished?`${r.finishDays||''}${r.finishDays?'d':''}`:`${Math.round(capped)}%`;
+    return `<div class="stadium-runner ${finished?'finished':''}" style="left:${pos.x}%;top:${pos.y}%;--runner:${color};--offset:${finishOffset}px" title="${escapeHtml(r.name)} · ${pct(r.achievement)}"><div class="stadium-runner-icon">🏃</div><div class="stadium-nameplate"><strong>${label}</strong><span>${status}</span></div></div>`;
   }).join('');
-
   container.querySelectorAll('.stadium-runner').forEach(runner=>{
     runner.addEventListener('click',event=>{
       event.stopPropagation();
@@ -453,11 +320,8 @@ function renderMiniRace(data){
   board.innerHTML=data.runners.map((r,i)=>{
     const color=colors[i%colors.length];
     const capped=Math.max(0,Math.min(100,r.achievement));
-    const result=r.finishPlace ? ordinal(r.finishPlace) : `${Math.round(capped)}%`;
-    return `<div class="mini-runner" style="--runner:${color}">
-      <div class="mini-runner-top"><span class="mini-name">${escapeHtml(r.name)}</span><span class="mini-result">${result}</span></div>
-      <div class="mini-track"><div class="mini-progress" style="width:${capped}%"></div></div>
-    </div>`;
+    const result=r.finishPlace?ordinal(r.finishPlace):`${Math.round(capped)}%`;
+    return `<div class="mini-runner" style="--runner:${color}"><div class="mini-runner-top"><span class="mini-name">${escapeHtml(r.name)}</span><span class="mini-result">${result}</span></div><div class="mini-track"><div class="mini-progress" style="width:${capped}%"></div></div></div>`;
   }).join('');
 }
 
@@ -465,15 +329,64 @@ function renderFinishHistory(data){
   const box=document.querySelector('#finishHistory');
   if(!box) return;
   const finishers=[...data.runners].filter(r=>r.finishPlace>0).sort((a,b)=>a.finishPlace-b.finishPlace);
-  if(!finishers.length){
-    box.innerHTML='<div class="finish-empty">No finishers yet</div>';
-    return;
-  }
-  box.innerHTML=finishers.map(r=>`<div class="finish-history-row">
-    <span class="finish-place">${ordinal(r.finishPlace)}</span>
-    <strong>${escapeHtml(r.name)}</strong>
-    <span>${r.finishDays?`${r.finishDays}d`:''}</span>
-  </div>`).join('');
+  if(!finishers.length){box.innerHTML='<div class="finish-empty">No finishers yet</div>';return;}
+  box.innerHTML=finishers.map(r=>`<div class="finish-history-row"><span class="finish-place">${ordinal(r.finishPlace)}</span><strong>${escapeHtml(r.name)}</strong><span>${r.finishDays?`${r.finishDays}d`:''}</span></div>`).join('');
+}
+
+function bangkokNow(){
+  const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Bangkok',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+  const get=t=>Number(parts.find(p=>p.type===t)?.value||0);
+  return {year:get('year'),month:get('month')-1,day:get('day')};
+}
+
+function monthFromTab(tab){
+  const monthMap={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+  const match=String(tab||'').match(/^TP([A-Z][a-z]{2})(\d{4})$/);
+  if(match && Object.prototype.hasOwnProperty.call(monthMap,match[1])) return {year:Number(match[2]),month:monthMap[match[1]]};
+  const now=bangkokNow();
+  return {year:now.year,month:now.month};
+}
+
+function wfhStageFor(data){
+  const now=bangkokNow();
+  const selected=monthFromTab(data.sourceTab||state.selectedMonth||state.currentMonthTab);
+  const selectedKey=selected.year*12+selected.month;
+  const nowKey=now.year*12+now.month;
+  if(selectedKey<nowKey) return 4;
+  if(selectedKey>nowKey) return 1;
+  const first=new Date(Date.UTC(selected.year,selected.month,1));
+  const firstDow=first.getUTCDay();
+  let week1Start=1;
+  if(firstDow===6) week1Start=3;
+  else if(firstDow===0) week1Start=2;
+  const startDow=new Date(Date.UTC(selected.year,selected.month,week1Start)).getUTCDay();
+  const week1End=week1Start+(5-startDow);
+  const week2Start=week1End+3;
+  const week3Start=week2Start+7;
+  const week4Start=week3Start+7;
+  if(now.day<week2Start) return 1;
+  if(now.day<week3Start) return 2;
+  if(now.day<week4Start) return 3;
+  return 4;
+}
+
+function formatGap(value){
+  const n=Math.max(0,Math.ceil(value));
+  if(n>=1000){const k=n/1000;return `฿${Number.isInteger(k)?k.toFixed(0):k.toFixed(1)}k`;}
+  return `฿${new Intl.NumberFormat('en-US',{maximumFractionDigits:0}).format(n)}`;
+}
+
+function wfhForRunner(r,data){
+  const monthlyTargetByLevel={R3:90000,R4:125000,R5:180000};
+  const level=String(r.level||'').trim().toUpperCase().replace(/\s+/g,'');
+  const monthlyTarget=monthlyTargetByLevel[level];
+  if(!monthlyTarget) return {sort:0,html:'<span class="wfh-na">Not eligible</span>'};
+  const stage=wfhStageFor(data);
+  const factor=[0,.25,.5,.75,1][stage];
+  const required=monthlyTarget*factor;
+  const more=Math.max(0,required-Number(r.revenue||0));
+  if(more<=0) return {sort:3000000000,html:'<span class="wfh-earned">WFH</span>'};
+  return {sort:2000000000-more,html:`<span class="wfh-office">OFFICE</span><span class="wfh-more"> · ${formatGap(more)} more</span>`};
 }
 
 function renderSalesBoard(data){
@@ -484,13 +397,26 @@ function renderSalesBoard(data){
     const rank=i+1;
     const badge=rank<=3?medal(rank):String(rank);
     const topClass=rank<=3?` top-${rank}`:'';
+    const suspended=!!r.suspended;
+    const suspensionChecked=r.suspensionCheckedAt||data.suspensionCheckedAt||'';
+    const suspensionHtml=suspended?'<span class="suspension-pill suspended">SUSPENDED</span>':'<span class="suspension-pill active">ACTIVE</span>';
+    const received=r.leadsReceived;
+    const quota=r.leadQuota;
+    const hasLeadData=received!==null&&received!==undefined&&quota!==null&&quota!==undefined;
+    const leadRatio=hasLeadData&&Number(quota)>0?Number(received)/Number(quota):-1;
+    const leadChecked=r.leadQuotaCheckedAt||data.leadQuotaCheckedAt||'';
+    const leadHtml=hasLeadData?`<span class="lead-quota-value">${Number(received)}/${Number(quota)}</span>`:'<span class="lead-quota-value">—</span>';
+    const wfh=wfhForRunner(r,data);
     return `<tr class="sales-row${topClass}">
       <td class="sales-rank">${badge}</td>
       <td><div class="sales-name">${escapeHtml(r.name)}</div></td>
-      <td><span class="level-pill">${escapeHtml(r.level || '-')}</span></td>
+      <td class="suspension-cell" data-sort="${suspended?1:0}" title="${escapeHtml(suspensionChecked?`Checked ${suspensionChecked}`:'')}">${suspensionHtml}</td>
+      <td class="lead-quota-cell" data-sort="${leadRatio}" title="${escapeHtml(leadChecked?`Checked ${leadChecked}`:'')}">${leadHtml}</td>
+      <td><span class="level-pill">${escapeHtml(r.level||'-')}</span></td>
       <td class="sales-revenue">฿${money(r.revenue)}</td>
       <td class="sales-deals">${money(r.deals)}</td>
       <td><span class="target-pill ${r.achievement>=100?'hit':''}">${pct(r.achievement)}</span></td>
+      <td class="wfh-cell" data-sort="${wfh.sort}">${wfh.html}</td>
     </tr>`;
   }).join('');
 }
@@ -508,22 +434,16 @@ function render(data){
   renderFinishHistory(data);
   renderSalesBoard(data);
 
-  const d=new Date(data.updatedAt || Date.now());
-  const historical=data.isCurrentMonth===false || (state.currentMonthTab && data.sourceTab!==state.currentMonthTab);
-  document.querySelector('#lastUpdated').textContent=historical
-    ? `Historical snapshot · ${data.monthLabel || data.sourceTab || ''}`
-    : `Last updated: ${d.toLocaleTimeString('en-GB',{hour12:false})}`;
-
-  const monthLabel = data.monthLabel || data.sourceTab || 'Current Month';
-  const eyebrow = document.querySelector('#monthEyebrow');
-  if (eyebrow) eyebrow.textContent = historical
-    ? `${String(monthLabel).toUpperCase()} · HISTORICAL VIEW`
-    : `${String(monthLabel).toUpperCase()} · FIRST TO 100% WINS`;
-
+  const d=new Date(data.updatedAt||Date.now());
+  const historical=data.isCurrentMonth===false||(state.currentMonthTab&&data.sourceTab!==state.currentMonthTab);
+  document.querySelector('#lastUpdated').textContent=historical?`Historical snapshot · ${data.monthLabel||data.sourceTab||''}`:`Last updated: ${d.toLocaleTimeString('en-GB',{hour12:false})}`;
+  const monthLabel=data.monthLabel||data.sourceTab||'Current Month';
+  const eyebrow=document.querySelector('#monthEyebrow');
+  if(eyebrow) eyebrow.textContent=historical?`${String(monthLabel).toUpperCase()} · HISTORICAL VIEW`:`${String(monthLabel).toUpperCase()} · FIRST TO 100% WINS`;
   if(!historical){
     data.runners.forEach(r=>{
       const prev=state.previousAchievements.get(r.name);
-      if(state.initialized && prev != null && prev < 100 && r.achievement >= 100) launchConfetti();
+      if(state.initialized&&prev!=null&&prev<100&&r.achievement>=100) launchConfetti();
       state.previousAchievements.set(r.name,r.achievement);
     });
     state.initialized=true;
@@ -532,7 +452,7 @@ function render(data){
 
 async function fetchData(){
   const warning=document.querySelector('#warning');
-  if(!API_URL){ render(FALLBACK_DATA); warning.classList.remove('hidden'); warning.textContent='Demo mode · add Apps Script URL for live data'; return; }
+  if(!API_URL){render(FALLBACK_DATA);warning.classList.remove('hidden');warning.textContent='Demo mode · add Apps Script URL for live data';return;}
   try{
     const params=new URLSearchParams();
     params.set('t',Date.now());
@@ -551,19 +471,29 @@ async function fetchData(){
   }
 }
 
-function escapeHtml(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])); }
-function launchConfetti(){ const layer=document.querySelector('#confettiLayer'); const palette=['#ffd65c','#62e89a','#60cfff','#ff78b8','#b89bff']; for(let i=0;i<70;i++){ const e=document.createElement('i'); e.className='confetti'; e.style.left=`${Math.random()*100}%`; e.style.background=palette[i%palette.length]; e.style.setProperty('--drift',`${(Math.random()-.5)*260}px`); e.style.animationDelay=`${Math.random()*.45}s`; layer.appendChild(e); setTimeout(()=>e.remove(),2600); } }
+function launchConfetti(){
+  const layer=document.querySelector('#confettiLayer');
+  const palette=['#ffd65c','#62e89a','#60cfff','#ff78b8','#b89bff'];
+  for(let i=0;i<70;i++){
+    const e=document.createElement('i');
+    e.className='confetti';
+    e.style.left=`${Math.random()*100}%`;
+    e.style.background=palette[i%palette.length];
+    e.style.setProperty('--drift',`${(Math.random()-.5)*260}px`);
+    e.style.animationDelay=`${Math.random()*.45}s`;
+    layer.appendChild(e);
+    setTimeout(()=>e.remove(),2600);
+  }
+}
 
 document.addEventListener('click',event=>{
-  if(!event.target.closest('.stadium-runner')){
-    document.querySelectorAll('.stadium-runner.tap-active').forEach(el=>el.classList.remove('tap-active'));
-  }
+  if(!event.target.closest('.stadium-runner')) document.querySelectorAll('.stadium-runner.tap-active').forEach(el=>el.classList.remove('tap-active'));
 });
-document.querySelector('#fullscreenBtn').addEventListener('click',()=>{ if(!document.fullscreenElement) document.documentElement.requestFullscreen?.(); else document.exitFullscreen?.(); });
+document.querySelector('#fullscreenBtn').addEventListener('click',()=>{if(!document.fullscreenElement) document.documentElement.requestFullscreen?.(); else document.exitFullscreen?.();});
 installStadiumTweaks();
 installSalesPodium();
 installMonthSelector();
 fetchData();
 setInterval(()=>{
-  if(!state.currentMonthTab || !state.selectedMonth || state.selectedMonth===state.currentMonthTab) fetchData();
+  if(!state.currentMonthTab||!state.selectedMonth||state.selectedMonth===state.currentMonthTab) fetchData();
 },POLL_MS);
