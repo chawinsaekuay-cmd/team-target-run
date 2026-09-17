@@ -50,6 +50,13 @@ function doGet(e) {
       workMode: row[13] || ''
     }));
 
+  const suspension = getSuspensionStatus_(ss);
+  runners.forEach(r => {
+    const s = suspension.byStaffCode[String(r.staffCode || '').trim()];
+    r.suspended = s ? !!s.suspended : false;
+    r.suspensionCheckedAt = s ? s.checkedAt : suspension.checkedAt;
+  });
+
   const parsed = selected.parsed;
   const finishMap = isCurrentMonth
     ? syncFinishLog_(ss, sheet.getName(), parsed, runners)
@@ -85,6 +92,7 @@ function doGet(e) {
   return ContentService
     .createTextOutput(JSON.stringify({
       updatedAt: new Date().toISOString(),
+      suspensionCheckedAt: suspension.checkedAt,
       sourceTab: sheet.getName(),
       currentTab: latest.sheet.getName(),
       isCurrentMonth,
@@ -93,6 +101,24 @@ function doGet(e) {
       runners
     }))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+function getSuspensionStatus_(ss) {
+  const sheet = ss.getSheetByName('Suspended Status');
+  const result = { checkedAt:'', byStaffCode:{} };
+  if (!sheet || sheet.getLastRow() < 2) return result;
+
+  const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, Math.min(sheet.getLastColumn(), 5)).getDisplayValues();
+  rows.forEach(row => {
+    const checkedAt = String(row[0] || '').trim();
+    const staffCode = String(row[1] || '').trim();
+    if (!staffCode) return;
+    const raw = String(row[4] || '').trim().toLowerCase();
+    const suspended = raw === 'true' || raw === 'yes' || raw === '1' || raw === 'suspended';
+    result.byStaffCode[staffCode] = { suspended, checkedAt };
+    if (checkedAt && (!result.checkedAt || checkedAt > result.checkedAt)) result.checkedAt = checkedAt;
+  });
+  return result;
 }
 
 function ensureFinishLog_(ss) {
