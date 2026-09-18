@@ -462,18 +462,18 @@
   <div id="confettiLayer" class="confetti-layer" aria-hidden="true"></div>
   <script src="script.js"></script>
   <script>
-    /* Mark only filled podium slots as winners so empty places don't celebrate. */
-    const podiumNode = document.querySelector('#podium');
+    /* Celebrate only the #1 filled slot on each podium. */
     const syncPodiumWinnerEffects = () => {
       document.querySelectorAll('.podium-slot').forEach(slot => {
         const name = slot.querySelector('.podium-name')?.textContent?.trim();
-        slot.classList.toggle('winner', Boolean(name && name !== '—'));
+        const isFirst = slot.classList.contains('first');
+        slot.classList.toggle('winner', Boolean(isFirst && name && name !== '—'));
       });
     };
-    if (podiumNode) {
-      new MutationObserver(syncPodiumWinnerEffects).observe(podiumNode,{childList:true,subtree:true,characterData:true});
-      syncPodiumWinnerEffects();
-    }
+    document.querySelectorAll('.podium').forEach(podium => {
+      new MutationObserver(syncPodiumWinnerEffects).observe(podium,{childList:true,subtree:true,characterData:true});
+    });
+    syncPodiumWinnerEffects();
 
     /* Live suspension + lead quota status from the Team Records helper tabs. */
     (() => {
