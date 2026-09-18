@@ -79,8 +79,6 @@ function installStadiumTweaks(){
     .deal-podium-card .podium-name.joint-name{white-space:normal !important;overflow:visible !important;text-overflow:clip !important;line-height:1.05;text-wrap:balance;}
     .deal-podium-card .joint-badge{margin-top:5px;font-size:10px;font-weight:900;letter-spacing:.12em;color:#8ee7ff;text-transform:uppercase;}
     .sales-podium-card .podium-days,.deal-podium-card .podium-days{font-size:18px !important;white-space:nowrap;}
-    .sales-podium-card .podium-slot.winner .podium-person,.deal-podium-card .podium-slot.winner .podium-person{animation:none !important;}
-    .sales-podium-card .podium-slot.winner::before,.sales-podium-card .podium-slot.winner::after,.deal-podium-card .podium-slot.winner::before,.deal-podium-card .podium-slot.winner::after{display:none !important;content:none !important;}
     @media (max-width:1450px){
       .podium-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);}
       .podium-grid .deal-podium-card{grid-column:1 / -1;}
