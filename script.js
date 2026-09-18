@@ -226,6 +226,7 @@ function renderPodium(data){
   podium.innerHTML=order.map(place=>{
     const r=byPlace.get(place);
     const cls=place===1?'first':place===2?'second':'third';
+    const winnerClass=place===1&&r?' winner':'';
     const name=r?escapeHtml(r.name):'—';
     const days=r&&r.finishDays?`${r.finishDays} day${r.finishDays===1?'':'s'} to finish`:'Waiting for finisher';
     return `<div class="podium-slot ${cls}"><div class="podium-person"><div class="podium-medal">${medal(place)}</div><div class="podium-name">${name}</div><div class="podium-days">${days}</div></div><div class="podium-block"><span>${place}</span><small>${ordinal(place)} PLACE</small></div></div>`;
@@ -243,7 +244,7 @@ function renderSalesPodium(data){
     const cls=place===1?'first':place===2?'second':'third';
     const name=r?escapeHtml(r.name):'—';
     const detail=r?`฿${money(r.revenue)}`:'Waiting for sales';
-    return `<div class="podium-slot ${cls}"><div class="podium-person"><div class="podium-medal">${medal(place)}</div><div class="podium-name">${name}</div><div class="podium-days">${detail}</div></div><div class="podium-block"><span>${place}</span><small>${ordinal(place)} PLACE</small></div></div>`;
+    return `<div class="podium-slot ${cls}${winnerClass}"><div class="podium-person"><div class="podium-medal">${medal(place)}</div><div class="podium-name">${name}</div><div class="podium-days">${detail}</div></div><div class="podium-block"><span>${place}</span><small>${ordinal(place)} PLACE</small></div></div>`;
   }).join('');
 }
 
@@ -257,12 +258,13 @@ function renderDealPodium(data){
   podium.innerHTML=order.map(place=>{
     const group=groups.get(place)||[];
     const cls=place===1?'first':place===2?'second':'third';
+    const winnerClass=place===1&&group.length?' winner':'';
     const hasTie=group.length>1;
     const names=group.length?group.map(r=>escapeHtml(r.name)).join(' / '):'—';
     const deals=group.length?group[0].deals:null;
     const detail=deals!=null?`${money(deals)} deal${deals===1?'':'s'}`:'Waiting for deals';
     const joint=hasTie?`<div class="joint-badge">JOINT ${ordinal(place)} · ${group.length} PEOPLE</div>`:'';
-    return `<div class="podium-slot ${cls}"><div class="podium-person"><div class="podium-medal">${medal(place)}</div><div class="podium-name${hasTie?' joint-name':''}">${names}</div>${joint}<div class="podium-days">${detail}</div></div><div class="podium-block"><span>${place}</span><small>${hasTie?'JOINT ':''}${ordinal(place)} PLACE</small></div></div>`;
+    return `<div class="podium-slot ${cls}${winnerClass}"><div class="podium-person"><div class="podium-medal">${medal(place)}</div><div class="podium-name${hasTie?' joint-name':''}">${names}</div>${joint}<div class="podium-days">${detail}</div></div><div class="podium-block"><span>${place}</span><small>${hasTie?'JOINT ':''}${ordinal(place)} PLACE</small></div></div>`;
   }).join('');
 }
 
