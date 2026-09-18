@@ -242,6 +242,7 @@ function renderSalesPodium(data){
   podium.innerHTML=order.map(place=>{
     const r=byPlace.get(place);
     const cls=place===1?'first':place===2?'second':'third';
+    const winnerClass=place===1&&r?' winner':'';
     const name=r?escapeHtml(r.name):'—';
     const detail=r?`฿${money(r.revenue)}`:'Waiting for sales';
     return `<div class="podium-slot ${cls}${winnerClass}"><div class="podium-person"><div class="podium-medal">${medal(place)}</div><div class="podium-name">${name}</div><div class="podium-days">${detail}</div></div><div class="podium-block"><span>${place}</span><small>${ordinal(place)} PLACE</small></div></div>`;
