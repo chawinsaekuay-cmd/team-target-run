@@ -253,20 +253,18 @@
     }
 
     /* Winners continuously celebrate without changing the podium layout. */
-    .podium-slot.winner .podium-person {
+    .podium-slot.first.winner .podium-person {
       animation:podiumBounce 1.15s ease-in-out infinite;
     }
-    .podium-slot.second.winner .podium-person { animation-delay:.16s; }
-    .podium-slot.third.winner .podium-person { animation-delay:.32s; }
-
+    
     @keyframes podiumBounce {
       0%,100% { transform:translateY(0) scale(1); }
       45% { transform:translateY(-22px) scale(1.035); }
       60% { transform:translateY(-16px) scale(1.02); }
     }
 
-    .podium-slot.winner::before,
-    .podium-slot.winner::after {
+    .podium-slot.first.winner::before,
+    .podium-slot.first.winner::after {
       position:absolute;
       z-index:4;
       top:28px;
@@ -279,20 +277,16 @@
       filter:drop-shadow(0 4px 8px rgba(0,0,0,.25));
       animation:podiumConfetti 1.7s ease-out infinite;
     }
-    .podium-slot.winner::before {
+    .podium-slot.first.winner::before {
       content:"🎉  ✨  🎊";
       left:-62px;
     }
-    .podium-slot.winner::after {
+    .podium-slot.first.winner::after {
       content:"🎊  ✨  🎉";
       right:-62px;
       animation-delay:.55s;
     }
-    .podium-slot.second.winner::before,
-    .podium-slot.second.winner::after { animation-delay:.25s; }
-    .podium-slot.third.winner::before,
-    .podium-slot.third.winner::after { animation-delay:.45s; }
-
+    
     @keyframes podiumConfetti {
       0% { opacity:0; transform:translateY(18px) scale(.72) rotate(-8deg); }
       18% { opacity:1; }
@@ -345,10 +339,10 @@
       .podium-card .podium-slot.third .podium-block small {
         font-size:8px !important;
       }
-      .podium-slot.winner::before,
-      .podium-slot.winner::after { font-size:20px; width:76px; }
-      .podium-slot.winner::before { left:-28px; }
-      .podium-slot.winner::after { right:-28px; }
+      .podium-slot.first.winner::before,
+      .podium-slot.first.winner::after { font-size:20px; width:76px; }
+      .podium-slot.first.winner::before { left:-28px; }
+      .podium-slot.first.winner::after { right:-28px; }
     }
   </style>
 </head>
