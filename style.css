@@ -264,3 +264,44 @@ body .podium-grid .deal-podium-card .podium-slot.first .podium-name {
 
 /* WFH gap amount */
 .wfh-more { color:#ff5c5c !important; }
+
+
+/* Celebration rule: only #1 may bounce or show confetti on Sales/Deals podiums. */
+body .podium-grid .sales-podium-card .podium-slot:not(.first) .podium-person,
+body .podium-grid .deal-podium-card .podium-slot:not(.first) .podium-person {
+  animation:none !important;
+  transform:none !important;
+}
+
+body .podium-grid .sales-podium-card .podium-slot:not(.first)::before,
+body .podium-grid .sales-podium-card .podium-slot:not(.first)::after,
+body .podium-grid .deal-podium-card .podium-slot:not(.first)::before,
+body .podium-grid .deal-podium-card .podium-slot:not(.first)::after {
+  display:none !important;
+  content:none !important;
+  animation:none !important;
+}
+
+body .podium-grid .sales-podium-card .podium-slot.first .podium-person,
+body .podium-grid .deal-podium-card .podium-slot.first .podium-person {
+  animation:podiumBounce 1.15s ease-in-out infinite !important;
+}
+
+body .podium-grid .sales-podium-card .podium-slot.first::before,
+body .podium-grid .sales-podium-card .podium-slot.first::after,
+body .podium-grid .deal-podium-card .podium-slot.first::before,
+body .podium-grid .deal-podium-card .podium-slot.first::after {
+  display:block !important;
+  animation:podiumConfetti 1.7s ease-out infinite !important;
+}
+
+body .podium-grid .sales-podium-card .podium-slot.first::before,
+body .podium-grid .deal-podium-card .podium-slot.first::before {
+  content:"🎉  ✨  🎊" !important;
+}
+
+body .podium-grid .sales-podium-card .podium-slot.first::after,
+body .podium-grid .deal-podium-card .podium-slot.first::after {
+  content:"🎊  ✨  🎉" !important;
+  animation-delay:.55s !important;
+}
