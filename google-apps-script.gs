@@ -49,6 +49,7 @@ function doGet(e) {
     }));
 
   const suspension = getSuspensionStatus_(ss);
+  if (isCurrentMonth) refreshLeadQuotaStatusIfNeeded_(ss, latest.sheet);
   const leadQuota = getLeadQuotaStatus_(ss);
   runners.forEach(r => {
     const staffCode = String(r.staffCode || '').trim();
@@ -137,6 +138,116 @@ function getSuspensionStatus_(ss) {
   });
   cache.put(cacheKey, JSON.stringify(result), 30);
   return result;
+}
+
+const LEAD_ALLOCATION_SOURCE_SPREADSHEET_ID_ = '19IIh2Cm6X1RCEB7UhFfLoCPmM0Nd6N60gBBgKwQJluM';
+const LEAD_ALLOCATION_SOURCE_SHEET_ = 'PC Details';
+
+function refreshLeadQuotaStatusIfNeeded_(ss, currentMonthlySheet) {
+  const cache = CacheService.getScriptCache();
+  const tabName = currentMonthlySheet ? currentMonthlySheet.getName() : '';
+  const guardKey = `leaderboard:lead-quota-refresh:v1:${tabName}`;
+  if (cache.get(guardKey)) return false;
+
+  try {
+    refreshLeadQuotaStatus_(ss, currentMonthlySheet);
+    cache.put(guardKey, '1', 3600);
+    return true;
+  } catch (err) {
+    console.error('Lead quota refresh failed:', err);
+    cache.put(guardKey, 'error', 300);
+    return false;
+  }
+}
+
+function refreshLeadQuotaStatusHourly() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const latest = getLatestMonthlySheet_(ss);
+  if (!latest) throw new Error('No current monthly TP tab found.');
+  refreshLeadQuotaStatus_(ss, latest);
+}
+
+function installLeadQuotaHourlyTrigger() {
+  const handler = 'refreshLeadQuotaStatusHourly';
+  ScriptApp.getProjectTriggers()
+    .filter(t => t.getHandlerFunction() === handler)
+    .forEach(t => ScriptApp.deleteTrigger(t));
+
+  ScriptApp.newTrigger(handler)
+    .timeBased()
+    .everyHours(1)
+    .create();
+}
+
+function refreshLeadQuotaStatus_(ss, currentMonthlySheet) {
+  if (!currentMonthlySheet) throw new Error('Current monthly sheet is required.');
+
+  const helper = ss.getSheetByName('Lead Quota Status') || ss.insertSheet('Lead Quota Status');
+  const rosterRows = currentMonthlySheet
+    .getRange(7, 1, Math.max(currentMonthlySheet.getLastRow() - 6, 1), 3)
+    .getDisplayValues()
+    .filter(row => {
+      const team = String(row[0] || '').trim();
+      const staffCode = String(row[1] || '').trim();
+      const pc = String(row[2] || '').trim();
+      return staffCode && pc && (team.startsWith('Chawin') || team.startsWith('Junior'));
+    });
+
+  const sourceSs = SpreadsheetApp.openById(LEAD_ALLOCATION_SOURCE_SPREADSHEET_ID_);
+  const sourceSheet = sourceSs.getSheetByName(LEAD_ALLOCATION_SOURCE_SHEET_);
+  if (!sourceSheet) throw new Error(`Source sheet "${LEAD_ALLOCATION_SOURCE_SHEET_}" not found.`);
+
+  const sourceLastRow = sourceSheet.getLastRow();
+  const sourceRows = sourceLastRow >= 4
+    ? sourceSheet.getRange(4, 1, sourceLastRow - 3, 27).getDisplayValues()
+    : [];
+
+  const sourceByStaffCode = {};
+  sourceRows.forEach(row => {
+    const staffCode = String(row[0] || '').trim();
+    if (!staffCode) return;
+    sourceByStaffCode[staffCode] = {
+      leadQuota: row[21],
+      leadsReceived: row[26]
+    };
+  });
+
+  const tz = ss.getSpreadsheetTimeZone() || Session.getScriptTimeZone() || 'Asia/Bangkok';
+  const checkedAt = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd HH:mm:ss XXX');
+  const output = rosterRows.map(row => {
+    const team = String(row[0] || '').trim();
+    const staffCode = String(row[1] || '').trim();
+    const pc = String(row[2] || '').trim();
+    const src = sourceByStaffCode[staffCode] || {};
+    return [
+      checkedAt,
+      staffCode,
+      pc,
+      team,
+      src.leadQuota === undefined ? '' : toNumber(src.leadQuota),
+      src.leadsReceived === undefined ? '' : toNumber(src.leadsReceived)
+    ];
+  });
+
+  helper.getRange(1, 1, 1, 6).setValues([[
+    'Checked At','Staff Code','PC','Team','Lead Quota','Leads Received'
+  ]]);
+  if (helper.getMaxRows() < output.length + 1) {
+    helper.insertRowsAfter(helper.getMaxRows(), output.length + 1 - helper.getMaxRows());
+  }
+  if (helper.getLastRow() > 1) {
+    helper.getRange(2, 1, helper.getLastRow() - 1, 6).clearContent();
+  }
+  if (output.length) {
+    helper.getRange(2, 1, output.length, 6).setValues(output);
+  }
+  helper.setFrozenRows(1);
+
+  const cache = CacheService.getScriptCache();
+  cache.remove('leaderboard:lead-quota:v2');
+  cache.remove('leaderboard:response:v3:latest');
+  cache.remove(`leaderboard:response:v3:${currentMonthlySheet.getName()}`);
+  return output.length;
 }
 
 function getLeadQuotaStatus_(ss) {
