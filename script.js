@@ -236,7 +236,7 @@ function renderPodium(data){
 function renderSalesPodium(data){
   const podium=document.querySelector('#salesPodium');
   if(!podium) return;
-  const ranked=[...data.runners].sort((a,b)=>b.revenue-a.revenue || b.deals-a.deals || a.name.localeCompare(b.name)).slice(0,3);
+  const ranked=[...data.runners].filter(r=>Number(r.revenue)>0).sort((a,b)=>b.revenue-a.revenue || b.deals-a.deals || a.name.localeCompare(b.name)).slice(0,3);
   const byPlace=new Map(ranked.map((r,i)=>[i+1,r]));
   const order=[2,1,3];
   podium.innerHTML=order.map(place=>{
@@ -252,7 +252,7 @@ function renderSalesPodium(data){
 function renderDealPodium(data){
   const podium=document.querySelector('#dealPodium');
   if(!podium) return;
-  const sorted=[...data.runners].sort((a,b)=>b.deals-a.deals || b.revenue-a.revenue || a.name.localeCompare(b.name));
+  const sorted=[...data.runners].filter(r=>Number(r.deals)>0).sort((a,b)=>b.deals-a.deals || b.revenue-a.revenue || a.name.localeCompare(b.name));
   const dealTotals=[...new Set(sorted.map(r=>r.deals))].sort((a,b)=>b-a).slice(0,3);
   const groups=new Map(dealTotals.map((deals,i)=>[i+1,sorted.filter(r=>r.deals===deals)]));
   const order=[2,1,3];
