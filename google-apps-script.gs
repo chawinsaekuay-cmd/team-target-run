@@ -48,8 +48,8 @@ function doGet(e) {
       workMode: row[13] || ''
     }));
 
+  if (isCurrentMonth) { refreshSuspensionStatusIfNeeded_(ss, latest.sheet); refreshLeadQuotaStatusIfNeeded_(ss, latest.sheet); }
   const suspension = getSuspensionStatus_(ss);
-  if (isCurrentMonth) refreshLeadQuotaStatusIfNeeded_(ss, latest.sheet);
   const leadQuota = getLeadQuotaStatus_(ss);
   runners.forEach(r => {
     const staffCode = String(r.staffCode || '').trim();
@@ -116,6 +116,43 @@ function jsonOutput_(payload) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+function refreshSuspensionStatusIfNeeded_(ss, currentMonthlySheet) {
+  const cache = CacheService.getScriptCache();
+  const key = 'leaderboard:suspension-refresh:v1:' + currentMonthlySheet.getName();
+  if (cache.get(key)) return false;
+  refreshSuspensionStatus_(ss, currentMonthlySheet);
+  cache.put(key, '1', 3600);
+  return true;
+}
+
+function refreshSuspensionStatus_(ss, currentMonthlySheet) {
+  const helper = ss.getSheetByName('Suspended Status') || ss.insertSheet('Suspended Status');
+  const roster = currentMonthlySheet.getRange(7,1,Math.max(currentMonthlySheet.getLastRow()-6,1),3).getDisplayValues().filter(function(row){
+    const team=String(row[0]||'').trim(), code=String(row[1]||'').trim(), pc=String(row[2]||'').trim();
+    return code && pc && (team.indexOf('Chawin')===0 || team.indexOf('Junior')===0);
+  });
+  const sourceSs = SpreadsheetApp.openById(LEAD_ALLOCATION_SOURCE_SPREADSHEET_ID_);
+  const sourceSheet = sourceSs.getSheetByName(LEAD_ALLOCATION_SOURCE_SHEET_);
+  const sourceRows = sourceSheet.getRange(4,1,Math.max(sourceSheet.getLastRow()-3,1),26).getDisplayValues();
+  const byCode = {};
+  sourceRows.forEach(function(row){
+    const code=String(row[0]||'').trim();
+    if (code) byCode[code]=String(row[25]||'').trim().toLowerCase()==='suspended';
+  });
+  const tz=ss.getSpreadsheetTimeZone()||'Asia/Bangkok';
+  const checkedAt=Utilities.formatDate(new Date(),tz,'yyyy-MM-dd HH:mm:ss XXX');
+  const output=roster.map(function(row){ return [checkedAt,String(row[1]).trim(),String(row[2]).trim(),String(row[0]).trim(),!!byCode[String(row[1]).trim()]]; });
+  helper.getRange(1,1,1,5).setValues([['Checked At','Staff Code','PC','Team','Suspended']]);
+  if (helper.getLastRow()>1) helper.getRange(2,1,helper.getLastRow()-1,5).clearContent();
+  if (output.length) helper.getRange(2,1,output.length,5).setValues(output);
+  helper.setFrozenRows(1);
+  const cache=CacheService.getScriptCache();
+  cache.remove('leaderboard:suspension:v2');
+  cache.remove('leaderboard:response:v3:latest');
+  cache.remove('leaderboard:response:v3:'+currentMonthlySheet.getName());
+  return output.length;
+}
+
 function getSuspensionStatus_(ss) {
   const cache = CacheService.getScriptCache();
   const cacheKey = 'leaderboard:suspension:v2';
@@ -164,6 +201,7 @@ function refreshLeadQuotaStatusHourly() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const latest = getLatestMonthlySheet_(ss);
   if (!latest) throw new Error('No current monthly TP tab found.');
+  refreshSuspensionStatus_(ss, latest);
   refreshLeadQuotaStatus_(ss, latest);
 }
 
