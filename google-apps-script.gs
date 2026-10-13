@@ -25,34 +25,60 @@ function doGet(e) {
   const sheet = selected.sheet;
   const isCurrentMonth = sheet.getName() === latest.sheet.getName();
 
+  const lastCol = Math.max(sheet.getLastColumn(), 1);
+  const headers = sheet.getRange(6, 1, 1, lastCol).getDisplayValues()[0].map(function(v){ return String(v || '').trim(); });
   const rowCount = Math.max(sheet.getLastRow() - 6, 1);
-  const values = sheet.getRange(7, 1, rowCount, 17).getDisplayValues();
+  const values = sheet.getRange(7, 1, rowCount, lastCol).getDisplayValues();
+
+  const idx = {
+    team: headerIndex_(headers, ['Team']),
+    staffCode: headerIndex_(headers, ['Staff code','Staff Code']),
+    name: headerIndex_(headers, ['PC']),
+    level: headerIndex_(headers, ['Level']),
+    deals: headerIndex_(headers, ['Deals']),
+    targetDeals: headerIndex_(headers, ['TARGET D']),
+    targetRevenue: headerIndex_(headers, ['TARGET R']),
+    revenue: headerIndex_(headers, ['Revenue']),
+    achievement: headerIndex_(headers, ['%']),
+    conversion: headerIndex_(headers, ['Conversion (L60%)','Conversion Rate (L60%)']),
+    kpi: headerIndex_(headers, ['KPI'])
+  };
 
   const runners = values
-    .filter(row => {
-      const team = String(row[0] || '').trim();
+    .filter(function(row) {
+      const team = String(cellAt_(row, idx.team) || '').trim();
       return team.startsWith('Chawin') || team.startsWith('Junior');
     })
-    .filter(row => String(row[2] || '').trim())
-    .map(row => ({
-      team: row[0],
-      staffCode: row[1],
-      name: row[2],
-      level: row[3],
-      deals: toNumber(row[4]),
-      targetDeals: toNumber(row[5]),
-      targetRevenue: toNumber(row[6]),
-      revenue: toNumber(row[7]),
-      achievement: toPercent(row[9]),
-      kpi: row[12] || '',
-      workMode: row[13] || ''
-    }));
+    .filter(function(row) { return String(cellAt_(row, idx.name) || '').trim(); })
+    .map(function(row) {
+      return {
+        team: cellAt_(row, idx.team),
+        staffCode: cellAt_(row, idx.staffCode),
+        name: cellAt_(row, idx.name),
+        level: cellAt_(row, idx.level),
+        deals: toNumber(cellAt_(row, idx.deals)),
+        targetDeals: toNumber(cellAt_(row, idx.targetDeals)),
+        targetRevenue: toNumber(cellAt_(row, idx.targetRevenue)),
+        revenue: toNumber(cellAt_(row, idx.revenue)),
+        achievement: toPercent(cellAt_(row, idx.achievement)),
+        conversion: cellAt_(row, idx.conversion) || '',
+        kpi: cellAt_(row, idx.kpi) || ''
+      };
+    });
 
   if (isCurrentMonth) { refreshSuspensionStatusIfNeeded_(ss, latest.sheet); refreshLeadQuotaStatusIfNeeded_(ss, latest.sheet); }
   const suspension = getSuspensionStatus_(ss);
   const leadQuota = getLeadQuotaStatus_(ss);
-  runners.forEach(r => {
+  runners.forEach(function(r) {
     const staffCode = String(r.staffCode || '').trim();
+    if (!isCurrentMonth) {
+      r.suspended = null;
+      r.suspensionCheckedAt = '';
+      r.leadQuota = null;
+      r.leadsReceived = null;
+      r.leadQuotaCheckedAt = '';
+      return;
+    }
     const s = suspension.byStaffCode[staffCode];
     const lq = leadQuota.byStaffCode[staffCode];
     r.suspended = s ? !!s.suspended : false;
@@ -373,7 +399,7 @@ function getFinishLog_(ss, sourceTab) {
 
   rows.forEach(row => {
     if (String(row[0]) !== sourceTab) return;
-    const key = `${String(row[3] || '').trim()}|${String(row[2] || '').trim().toLowerCase()}`;
+    const key = stableRaceKey_(row[3], row[2]);
     const originalPlace = Number(row[1]) || 0;
     const firstAt = row[4] instanceof Date ? row[4] : (row[4] ? new Date(row[4]) : null);
     const activeAtRaw = width >= 9 ? row[8] : '';
@@ -424,7 +450,7 @@ function syncFinishLog_(ss, sourceTab, parsed, runners) {
 
     rows.forEach((row, index) => {
       if (String(row[0]) !== sourceTab) return;
-      const key = `${String(row[3] || '').trim()}|${String(row[2] || '').trim().toLowerCase()}`;
+      const key = stableRaceKey_(row[3], row[2]);
       const originalPlace = Number(row[1]) || 0;
       const firstAt = row[4] instanceof Date ? row[4] : (row[4] ? new Date(row[4]) : null);
       const activeAt = row[8] instanceof Date ? row[8] : (row[8] ? new Date(row[8]) : firstAt);
@@ -568,14 +594,20 @@ function findLogRow_(log, sourceTab, runner) {
   const rows = log.getRange(2,1,log.getLastRow()-1,4).getValues();
   const key = raceKey_(runner);
   for (let i=0;i<rows.length;i++) {
-    const rowKey = `${String(rows[i][3] || '').trim()}|${String(rows[i][2] || '').trim().toLowerCase()}`;
+    const rowKey = stableRaceKey_(rows[i][3], rows[i][2]);
     if (String(rows[i][0]) === sourceTab && rowKey === key) return i+2;
   }
   return 0;
 }
 
+function stableRaceKey_(staffCode, name) {
+  const code = String(staffCode || '').trim();
+  if (code) return 'code:' + code;
+  return 'name:' + String(name || '').trim().toLowerCase();
+}
+
 function raceKey_(runner) {
-  return `${String(runner.staffCode || '').trim()}|${String(runner.name || '').trim().toLowerCase()}`;
+  return stableRaceKey_(runner.staffCode, runner.name);
 }
 
 function getRaceDay_(date, year, monthIndex, timezone) {
@@ -618,6 +650,19 @@ function parseMonthlyTab_(name) {
   const monthIndex = months[match[1].toLowerCase()];
   const year = Number(match[2]);
   return { monthIndex, year, monthName: monthNames[monthIndex] };
+}
+
+function headerIndex_(headers, names) {
+  for (let i = 0; i < names.length; i++) {
+    const wanted = String(names[i] || '').trim().toLowerCase();
+    const index = headers.findIndex(function(h){ return String(h || '').trim().toLowerCase() === wanted; });
+    if (index >= 0) return index;
+  }
+  return -1;
+}
+
+function cellAt_(row, index) {
+  return index >= 0 ? row[index] : '';
 }
 
 function toNumber(value) {
