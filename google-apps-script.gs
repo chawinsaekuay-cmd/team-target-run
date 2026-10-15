@@ -179,11 +179,15 @@ function refreshSuspensionStatus_(ss, currentMonthlySheet) {
   });
   const sourceSs = SpreadsheetApp.openById(LEAD_ALLOCATION_SOURCE_SPREADSHEET_ID_);
   const sourceSheet = sourceSs.getSheetByName(LEAD_ALLOCATION_SOURCE_SHEET_);
-  const sourceRows = sourceSheet.getRange(4,1,Math.max(sourceSheet.getLastRow()-3,1),26).getDisplayValues();
+  const sourceLastCol = Math.max(sourceSheet.getLastColumn(), 1);
+  const sourceHeaders = sourceSheet.getRange(3,1,1,sourceLastCol).getDisplayValues()[0].map(function(v){ return String(v||'').trim(); });
+  const sourceStaffIdx = headerIndex_(sourceHeaders, ['Staff code','Staff Code']);
+  const sourceSuspendedIdx = headerIndex_(sourceHeaders, ['Lead allocation suspended']);
+  const sourceRows = sourceSheet.getRange(4,1,Math.max(sourceSheet.getLastRow()-3,1),sourceLastCol).getDisplayValues();
   const byCode = {};
   sourceRows.forEach(function(row){
-    const code=String(row[0]||'').trim();
-    if (code) byCode[code]=String(row[25]||'').trim().toLowerCase()==='suspended';
+    const code=String(cellAt_(row,sourceStaffIdx)||'').trim();
+    if (code) byCode[code]=String(cellAt_(row,sourceSuspendedIdx)||'').trim().toLowerCase()==='suspended';
   });
   const tz=ss.getSpreadsheetTimeZone()||'Asia/Bangkok';
   const checkedAt=Utilities.formatDate(new Date(),tz,'yyyy-MM-dd HH:mm:ss XXX');
@@ -282,17 +286,22 @@ function refreshLeadQuotaStatus_(ss, currentMonthlySheet) {
   if (!sourceSheet) throw new Error(`Source sheet "${LEAD_ALLOCATION_SOURCE_SHEET_}" not found.`);
 
   const sourceLastRow = sourceSheet.getLastRow();
+  const sourceLastCol = Math.max(sourceSheet.getLastColumn(), 1);
+  const sourceHeaders = sourceSheet.getRange(3, 1, 1, sourceLastCol).getDisplayValues()[0].map(function(v){ return String(v || '').trim(); });
+  const sourceStaffIdx = headerIndex_(sourceHeaders, ['Staff code','Staff Code']);
+  const sourceQuotaIdx = headerIndex_(sourceHeaders, ['R Target leads']);
+  const sourceReceivedIdx = headerIndex_(sourceHeaders, ['R leads curently month','R leads currently month']);
   const sourceRows = sourceLastRow >= 4
-    ? sourceSheet.getRange(4, 1, sourceLastRow - 3, 27).getDisplayValues()
+    ? sourceSheet.getRange(4, 1, sourceLastRow - 3, sourceLastCol).getDisplayValues()
     : [];
 
   const sourceByStaffCode = {};
   sourceRows.forEach(row => {
-    const staffCode = String(row[0] || '').trim();
+    const staffCode = String(cellAt_(row, sourceStaffIdx) || '').trim();
     if (!staffCode) return;
     sourceByStaffCode[staffCode] = {
-      leadQuota: row[21],
-      leadsReceived: row[26]
+      leadQuota: cellAt_(row, sourceQuotaIdx),
+      leadsReceived: cellAt_(row, sourceReceivedIdx)
     };
   });
 
