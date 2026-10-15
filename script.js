@@ -34,7 +34,9 @@ const state = {
   initialized: false,
   selectedMonth: new URLSearchParams(window.location.search).get('month') || '',
   currentMonthTab: '',
-  availableMonths: []
+  availableMonths: [],
+  fetchSeq: 0,
+  fetchController: null
 };
 
 function money(v){ return new Intl.NumberFormat('en-US',{maximumFractionDigits:0}).format(v || 0); }
@@ -454,17 +456,33 @@ function render(data){
 async function fetchData(){
   const warning=document.querySelector('#warning');
   if(!API_URL){render(FALLBACK_DATA);warning.classList.remove('hidden');warning.textContent='Demo mode · add Apps Script URL for live data';return;}
+
+  const seq=++state.fetchSeq;
+  const requestedMonth=state.selectedMonth || '';
+  if(state.fetchController) state.fetchController.abort();
+  const controller=new AbortController();
+  state.fetchController=controller;
+
   try{
     const params=new URLSearchParams();
     params.set('t',Date.now());
-    if(state.selectedMonth) params.set('month',state.selectedMonth);
+    if(requestedMonth) params.set('month',requestedMonth);
     const url=`${API_URL}${API_URL.includes('?')?'&':'?'}${params.toString()}`;
-    const res=await fetch(url,{cache:'no-store'});
+    const res=await fetch(url,{cache:'no-store',signal:controller.signal});
     if(!res.ok) throw new Error(`HTTP ${res.status}`);
     const data=await res.json();
+
+    if(seq!==state.fetchSeq) return;
+    if(requestedMonth && data.sourceTab && data.sourceTab!==requestedMonth){
+      console.warn('Ignored stale month response',requestedMonth,data.sourceTab);
+      return;
+    }
+
     render(data);
     warning.classList.add('hidden');
   }catch(err){
+    if(err && err.name==='AbortError') return;
+    if(seq!==state.fetchSeq) return;
     console.error(err);
     warning.classList.remove('hidden');
     warning.textContent='Live data temporarily unavailable';
