@@ -4,27 +4,13 @@ const POLL_MS = 10000;
 
 const FALLBACK_DATA = {
   updatedAt: new Date().toISOString(),
-  monthLabel: 'September 2026',
-  sourceTab: 'TPSep2026',
-  currentTab: 'TPSep2026',
+  monthLabel: monthLabelFromTab ? monthLabelFromTab(currentBangkokMonthTab ? currentBangkokMonthTab() : '') : 'Current Month',
+  sourceTab: currentBangkokMonthTab ? currentBangkokMonthTab() : '',
+  currentTab: currentBangkokMonthTab ? currentBangkokMonthTab() : '',
   isCurrentMonth: true,
-  availableMonths: [{tab:'TPSep2026',label:'September 2026',isCurrent:true}],
-  runners: [
-    {name:"Beam",level:"R3",deals:3,targetRevenue:90000,revenue:124500,achievement:138.33,finishPlace:1,finishDays:9},
-    {name:"Gorn",level:"R[1]N",deals:3,targetRevenue:37000,revenue:52000,achievement:140.54,finishPlace:2,finishDays:13},
-    {name:"Ping",level:"R[1]N",deals:2,targetRevenue:37000,revenue:31000,achievement:83.78},
-    {name:"Kwan",level:"R[1]N",deals:1,targetRevenue:37000,revenue:30000,achievement:81.08},
-    {name:"Nat",level:"R3",deals:5,targetRevenue:90000,revenue:65750,achievement:73.06},
-    {name:"Pik",level:"R5",deals:3,targetRevenue:180000,revenue:129000,achievement:71.67},
-    {name:"Baitong",level:"R[1]N",deals:2,targetRevenue:37000,revenue:24667,achievement:66.67},
-    {name:"Sarah",level:"R3",deals:2,targetRevenue:90000,revenue:56519,achievement:62.80},
-    {name:"Little",level:"R5",deals:2,targetRevenue:180000,revenue:108000,achievement:60.00},
-    {name:"Pimdow",level:"R[1]N",deals:1,targetRevenue:37000,revenue:15000,achievement:40.54},
-    {name:"Tle",level:"R4",deals:2,targetRevenue:125000,revenue:47000,achievement:37.60},
-    {name:"Nick",level:"R4",deals:2,targetRevenue:125000,revenue:38000,achievement:30.40},
-    {name:"Imim",level:"R2",deals:1,targetRevenue:65000,revenue:14250,achievement:21.92},
-    {name:"Chalis",level:"R[1]N",deals:0,targetRevenue:37000,revenue:0,achievement:0}
-  ]
+  availableMonths: [],
+  summary: {teamRevenue:0,totalTarget:0,totalDeals:0,avgAchievement:0,teamAchievement:0,runnerCount:0},
+  runners: []
 };
 
 const colors = ["#ffd65c","#9be8ff","#7ee29a","#a99cff","#ff8fbe","#ffb66e","#5bd6ce","#ff8181","#a8dd6e","#7cb7ff","#f9db79","#c5a4ff","#8ed7bc","#c7d0de","#ff9d76","#65e4ff","#f4a8ff","#a4f27a"];
@@ -508,7 +494,9 @@ async function fetchData(){
 
     if(seq!==state.fetchSeq) return;
     if(requestedMonth && data.sourceTab && data.sourceTab!==requestedMonth){
-      console.warn('Ignored stale month response',requestedMonth,data.sourceTab);
+      console.warn('Ignored wrong-month API response',requestedMonth,data.sourceTab);
+      warning.classList.remove('hidden');
+      warning.textContent='API returned '+data.sourceTab+' while '+requestedMonth+' was requested';
       return;
     }
 
@@ -520,7 +508,10 @@ async function fetchData(){
     console.error(err);
     warning.classList.remove('hidden');
     warning.textContent='Live data temporarily unavailable';
-    if(!state.lastGood) render(FALLBACK_DATA);
+    if(!state.lastGood){
+      const fallback={...FALLBACK_DATA,sourceTab:requestedMonth||state.currentMonthTab,currentTab:state.currentMonthTab,monthLabel:monthLabelFromTab(requestedMonth||state.currentMonthTab),isCurrentMonth:(requestedMonth||state.currentMonthTab)===state.currentMonthTab};
+      render(fallback);
+    }
   }
 }
 
