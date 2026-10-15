@@ -14,7 +14,7 @@ const TEAM_RECORDS_SPREADSHEET_ID_ = '1oHiR_HPolqckkMLMgKMTSJVkkBwJeyozYuioJF9UU
 function doGet(e) {
   const requestedMonth = String(e && e.parameter && e.parameter.month || '').trim();
   const scriptCache = CacheService.getScriptCache();
-  const responseCacheKey = `leaderboard:response:v4:${requestedMonth || 'latest'}`;
+  const responseCacheKey = `leaderboard:response:v4s2:${requestedMonth || 'latest'}`;
   const cachedResponse = scriptCache.get(responseCacheKey);
   if (cachedResponse) return jsonOutput_(cachedResponse);
 
@@ -198,32 +198,72 @@ function refreshSuspensionStatus_(ss, currentMonthlySheet) {
   helper.setFrozenRows(1);
   const cache=CacheService.getScriptCache();
   cache.remove('leaderboard:suspension:v2');
-  cache.remove('leaderboard:response:v4:latest');
-  cache.remove('leaderboard:response:v4:'+currentMonthlySheet.getName());
+  cache.remove('leaderboard:suspension:v4');
+  cache.remove('leaderboard:response:v4s2:latest');
+  cache.remove('leaderboard:response:v4s2:'+currentMonthlySheet.getName());
   return output.length;
 }
 
 function getSuspensionStatus_(ss) {
   const cache = CacheService.getScriptCache();
-  const cacheKey = 'leaderboard:suspension:v2';
+  const cacheKey = 'leaderboard:suspension:v4';
   const cached = cache.get(cacheKey);
   if (cached) return JSON.parse(cached);
 
-  const sheet = ss.getSheetByName('Suspended Status');
   const result = { checkedAt:'', byStaffCode:{} };
+
+  // Live read from PC Details. This is read-only and isolated from monthly KPI loading.
+  try {
+    const sourceSs = SpreadsheetApp.openById(LEAD_ALLOCATION_SOURCE_SPREADSHEET_ID_);
+    const sourceSheet = sourceSs.getSheetByName(LEAD_ALLOCATION_SOURCE_SHEET_);
+    if (sourceSheet) {
+      const lastCol = Math.max(sourceSheet.getLastColumn(), 1);
+      const headers = sourceSheet.getRange(3,1,1,lastCol).getDisplayValues()[0]
+        .map(function(v){ return String(v || '').trim(); });
+      const staffIdx = headerIndex_(headers, ['Staff code','Staff Code']);
+      const suspendedIdx = headerIndex_(headers, ['Lead allocation suspended']);
+
+      if (staffIdx >= 0 && suspendedIdx >= 0) {
+        const rows = sourceSheet.getRange(4,1,Math.max(sourceSheet.getLastRow()-3,1),lastCol).getDisplayValues();
+        const tz = ss.getSpreadsheetTimeZone() || Session.getScriptTimeZone() || 'Asia/Bangkok';
+        result.checkedAt = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd HH:mm:ss XXX');
+
+        rows.forEach(function(row){
+          const staffCode = String(cellAt_(row, staffIdx) || '').trim();
+          if (!staffCode) return;
+          const raw = String(cellAt_(row, suspendedIdx) || '').trim().toLowerCase();
+          result.byStaffCode[staffCode] = {
+            suspended: raw === 'suspended',
+            checkedAt: result.checkedAt
+          };
+        });
+
+        cache.put(cacheKey, JSON.stringify(result), 15);
+        return result;
+      }
+    }
+  } catch (err) {
+    console.error('Live suspension read failed; using helper fallback:', err);
+  }
+
+  // Safe fallback only if the live source cannot be read.
+  const sheet = ss.getSheetByName('Suspended Status');
   if (!sheet || sheet.getLastRow() < 2) return result;
 
-  const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, Math.min(sheet.getLastColumn(), 5)).getDisplayValues();
-  rows.forEach(row => {
+  const rows = sheet.getRange(2,1,sheet.getLastRow()-1,Math.min(sheet.getLastColumn(),5)).getDisplayValues();
+  rows.forEach(function(row){
     const checkedAt = String(row[0] || '').trim();
     const staffCode = String(row[1] || '').trim();
     if (!staffCode) return;
     const raw = String(row[4] || '').trim().toLowerCase();
-    const suspended = raw === 'true' || raw === 'yes' || raw === '1' || raw === 'suspended';
-    result.byStaffCode[staffCode] = { suspended, checkedAt };
+    result.byStaffCode[staffCode] = {
+      suspended: raw === 'true' || raw === 'yes' || raw === '1' || raw === 'suspended',
+      checkedAt: checkedAt
+    };
     if (checkedAt && (!result.checkedAt || checkedAt > result.checkedAt)) result.checkedAt = checkedAt;
   });
-  cache.put(cacheKey, JSON.stringify(result), 30);
+
+  cache.put(cacheKey, JSON.stringify(result), 15);
   return result;
 }
 
@@ -338,8 +378,8 @@ function refreshLeadQuotaStatus_(ss, currentMonthlySheet) {
 
   const cache = CacheService.getScriptCache();
   cache.remove('leaderboard:lead-quota:v2');
-  cache.remove('leaderboard:response:v4:latest');
-  cache.remove(`leaderboard:response:v4:${currentMonthlySheet.getName()}`);
+  cache.remove('leaderboard:response:v4s2:latest');
+  cache.remove(`leaderboard:response:v4s2:${currentMonthlySheet.getName()}`);
   return output.length;
 }
 
