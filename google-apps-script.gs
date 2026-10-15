@@ -14,7 +14,7 @@ const TEAM_RECORDS_SPREADSHEET_ID_ = '1oHiR_HPolqckkMLMgKMTSJVkkBwJeyozYuioJF9UU
 function doGet(e) {
   const requestedMonth = String(e && e.parameter && e.parameter.month || '').trim();
   const scriptCache = CacheService.getScriptCache();
-  const responseCacheKey = `leaderboard:response:v5:${requestedMonth || 'latest'}`;
+  const responseCacheKey = `leaderboard:response:v6:${requestedMonth || 'latest'}`;
   const cachedResponse = scriptCache.get(responseCacheKey);
   if (cachedResponse) return jsonOutput_(cachedResponse);
 
@@ -68,12 +68,7 @@ function doGet(e) {
       };
     });
 
-  if (isCurrentMonth) {
-    try { refreshSuspensionStatus_(ss, latest.sheet); }
-    catch (err) { console.error('Live suspension refresh failed:', err); }
-    refreshLeadQuotaStatusIfNeeded_(ss, latest.sheet);
-  }
-  const suspension = getSuspensionStatus_(ss);
+  const suspension = isCurrentMonth ? getLiveSuspensionStatus_() : { checkedAt:'', byStaffCode:{} };
   const leadQuota = getLeadQuotaStatus_(ss);
   runners.forEach(function(r) {
     const staffCode = String(r.staffCode || '').trim();
@@ -95,9 +90,15 @@ function doGet(e) {
   });
 
   const parsed = selected.parsed;
-  const finishMap = isCurrentMonth
-    ? getCurrentFinishMap_(ss, sheet.getName(), parsed, runners)
-    : getFinishLog_(ss, sheet.getName());
+  let finishMap = {};
+  try {
+    finishMap = isCurrentMonth
+      ? getCurrentFinishMap_(ss, sheet.getName(), parsed, runners)
+      : getFinishLog_(ss, sheet.getName());
+  } catch (err) {
+    console.error('Race finish read failed:', err);
+    finishMap = {};
+  }
 
   runners.forEach(r => {
     const finish = finishMap[raceKey_(r)];
@@ -204,9 +205,36 @@ function refreshSuspensionStatus_(ss, currentMonthlySheet) {
   cache.remove('leaderboard:suspension:v2');
   cache.remove('leaderboard:suspension:v3');
   cache.remove('leaderboard:suspension:v4');
-  cache.remove('leaderboard:response:v5:latest');
-  cache.remove('leaderboard:response:v5:'+currentMonthlySheet.getName());
+  cache.remove('leaderboard:response:v6:latest');
+  cache.remove('leaderboard:response:v6:'+currentMonthlySheet.getName());
   return output.length;
+}
+
+function getLiveSuspensionStatus_() {
+  const result = { checkedAt:'', byStaffCode:{} };
+  try {
+    const sourceSs = SpreadsheetApp.openById(LEAD_ALLOCATION_SOURCE_SPREADSHEET_ID_);
+    const sourceSheet = sourceSs.getSheetByName(LEAD_ALLOCATION_SOURCE_SHEET_);
+    if (!sourceSheet) return result;
+
+    const lastCol = Math.max(sourceSheet.getLastColumn(), 1);
+    const headers = sourceSheet.getRange(3,1,1,lastCol).getDisplayValues()[0].map(function(v){ return String(v||'').trim(); });
+    const staffIdx = headerIndex_(headers, ['Staff code','Staff Code']);
+    const suspendedIdx = headerIndex_(headers, ['Lead allocation suspended']);
+    if (staffIdx < 0 || suspendedIdx < 0) return result;
+
+    const rows = sourceSheet.getRange(4,1,Math.max(sourceSheet.getLastRow()-3,1),lastCol).getDisplayValues();
+    result.checkedAt = new Date().toISOString();
+    rows.forEach(function(row){
+      const code = String(cellAt_(row, staffIdx) || '').trim();
+      if (!code) return;
+      const raw = String(cellAt_(row, suspendedIdx) || '').trim().toLowerCase();
+      result.byStaffCode[code] = { suspended: raw === 'suspended', checkedAt: result.checkedAt };
+    });
+  } catch (err) {
+    console.error('Suspension source read failed:', err);
+  }
+  return result;
 }
 
 function getSuspensionStatus_(ss) {
@@ -347,8 +375,8 @@ function refreshLeadQuotaStatus_(ss, currentMonthlySheet) {
 
   const cache = CacheService.getScriptCache();
   cache.remove('leaderboard:lead-quota:v2');
-  cache.remove('leaderboard:response:v5:latest');
-  cache.remove(`leaderboard:response:v5:${currentMonthlySheet.getName()}`);
+  cache.remove('leaderboard:response:v6:latest');
+  cache.remove(`leaderboard:response:v6:${currentMonthlySheet.getName()}`);
   return output.length;
 }
 
