@@ -12,7 +12,7 @@
 function doGet(e) {
   const requestedMonth = String(e && e.parameter && e.parameter.month || '').trim();
   const scriptCache = CacheService.getScriptCache();
-  const responseCacheKey = `leaderboard:response:v3:${requestedMonth || 'latest'}`;
+  const responseCacheKey = `leaderboard:response:v4:${requestedMonth || 'latest'}`;
   const cachedResponse = scriptCache.get(responseCacheKey);
   if (cachedResponse) return jsonOutput_(cachedResponse);
 
@@ -120,6 +120,17 @@ function doGet(e) {
     isCurrent: item.sheet.getName() === latest.sheet.getName()
   }));
 
+  const summary = {
+    teamRevenue: runners.reduce(function(sum,r){ return sum + Number(r.revenue || 0); }, 0),
+    totalTarget: runners.reduce(function(sum,r){ return sum + Number(r.targetRevenue || 0); }, 0),
+    totalDeals: runners.reduce(function(sum,r){ return sum + Number(r.deals || 0); }, 0),
+    avgAchievement: runners.length ? runners.reduce(function(sum,r){ return sum + Number(r.achievement || 0); }, 0) / runners.length : 0,
+    teamAchievement: runners.reduce(function(sum,r){ return sum + Number(r.targetRevenue || 0); }, 0)
+      ? runners.reduce(function(sum,r){ return sum + Number(r.revenue || 0); }, 0) / runners.reduce(function(sum,r){ return sum + Number(r.targetRevenue || 0); }, 0) * 100
+      : 0,
+    runnerCount: runners.length
+  };
+
   const payload = JSON.stringify({
     updatedAt: new Date().toISOString(),
     suspensionCheckedAt: suspension.checkedAt,
@@ -129,6 +140,7 @@ function doGet(e) {
     isCurrentMonth,
     monthLabel: `${parsed.monthName} ${parsed.year}`,
     availableMonths,
+    summary,
     runners
   });
 
@@ -174,8 +186,8 @@ function refreshSuspensionStatus_(ss, currentMonthlySheet) {
   helper.setFrozenRows(1);
   const cache=CacheService.getScriptCache();
   cache.remove('leaderboard:suspension:v2');
-  cache.remove('leaderboard:response:v3:latest');
-  cache.remove('leaderboard:response:v3:'+currentMonthlySheet.getName());
+  cache.remove('leaderboard:response:v4:latest');
+  cache.remove('leaderboard:response:v4:'+currentMonthlySheet.getName());
   return output.length;
 }
 
@@ -309,8 +321,8 @@ function refreshLeadQuotaStatus_(ss, currentMonthlySheet) {
 
   const cache = CacheService.getScriptCache();
   cache.remove('leaderboard:lead-quota:v2');
-  cache.remove('leaderboard:response:v3:latest');
-  cache.remove(`leaderboard:response:v3:${currentMonthlySheet.getName()}`);
+  cache.remove('leaderboard:response:v4:latest');
+  cache.remove(`leaderboard:response:v4:${currentMonthlySheet.getName()}`);
   return output.length;
 }
 
