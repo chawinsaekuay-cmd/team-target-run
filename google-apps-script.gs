@@ -395,7 +395,7 @@ function getFinishLog_(ss, sourceTab) {
 
   const width = Math.min(Math.max(log.getLastColumn(), 8), 10);
   const rows = log.getRange(2, 1, log.getLastRow() - 1, width).getValues();
-  const active = [];
+  const bestByKey = {};
 
   rows.forEach(row => {
     if (String(row[0]) !== sourceTab) return;
@@ -408,16 +408,29 @@ function getFinishLog_(ss, sourceTab) {
     if (!qualified) return;
 
     const activeAt = activeAtRaw instanceof Date ? activeAtRaw : (activeAtRaw ? new Date(activeAtRaw) : firstAt);
-    active.push({
+    const item = {
       key,
       originalPlace,
       activeAt,
+      firstAt,
       finishedAt: firstAt ? firstAt.toISOString() : '',
       finishDate: String(row[5] || ''),
       daysToFinish: Number(row[6]) || 0
-    });
+    };
+
+    const existing = bestByKey[key];
+    if (!existing) {
+      bestByKey[key] = item;
+      return;
+    }
+    const itemTime = item.firstAt ? item.firstAt.getTime() : Number.MAX_SAFE_INTEGER;
+    const existingTime = existing.firstAt ? existing.firstAt.getTime() : Number.MAX_SAFE_INTEGER;
+    if (itemTime < existingTime || (itemTime === existingTime && item.originalPlace < existing.originalPlace)) {
+      bestByKey[key] = item;
+    }
   });
 
+  const active = Object.keys(bestByKey).map(key => bestByKey[key]);
   active.sort((a,b) => {
     const at = a.activeAt ? a.activeAt.getTime() : 0;
     const bt = b.activeAt ? b.activeAt.getTime() : 0;
