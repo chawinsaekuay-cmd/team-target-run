@@ -288,7 +288,7 @@ function refreshLeadQuotaStatusIfNeeded_(ss, currentMonthlySheet) {
 }
 
 function refreshLeadQuotaStatusHourly() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = SpreadsheetApp.openById(TEAM_RECORDS_SPREADSHEET_ID_);
   const latest = getLatestMonthlySheet_(ss);
   if (!latest) throw new Error('No current monthly TP tab found.');
   refreshSuspensionStatus_(ss, latest);
