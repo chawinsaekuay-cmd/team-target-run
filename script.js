@@ -240,10 +240,11 @@ function normalize(payload){
 
 function renderKpis(data){
   const rs=data.runners;
-  const totalRevenue=rs.reduce((s,r)=>s+r.revenue,0);
-  const totalTarget=rs.reduce((s,r)=>s+r.targetRevenue,0);
-  const totalDeals=rs.reduce((s,r)=>s+r.deals,0);
-  const avg=rs.length?rs.reduce((s,r)=>s+r.achievement,0)/rs.length:0;
+  const summary=data.summary||{};
+  const totalRevenue=Number.isFinite(Number(summary.teamRevenue))?Number(summary.teamRevenue):rs.reduce((s,r)=>s+r.revenue,0);
+  const totalTarget=Number.isFinite(Number(summary.totalTarget))?Number(summary.totalTarget):rs.reduce((s,r)=>s+r.targetRevenue,0);
+  const totalDeals=Number.isFinite(Number(summary.totalDeals))?Number(summary.totalDeals):rs.reduce((s,r)=>s+r.deals,0);
+  const avg=Number.isFinite(Number(summary.avgAchievement))?Number(summary.avgAchievement):(rs.length?rs.reduce((s,r)=>s+r.achievement,0)/rs.length:0);
   document.querySelector('#kpiGrid').innerHTML=[
     ['Team Revenue',`฿${money(totalRevenue)}`],
     ['Total Target',`฿${money(totalTarget)}`],
