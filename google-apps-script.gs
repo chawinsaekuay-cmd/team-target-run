@@ -1,3 +1,5 @@
+const TEAM_RECORDS_SPREADSHEET_ID_ = '1oHiR_HPolqckkMLMgKMTSJVkkBwJeyozYuioJF9UUQk';
+
 /**
  * Deploy as: Web app
  * Execute as: Me
@@ -16,7 +18,7 @@ function doGet(e) {
   const cachedResponse = scriptCache.get(responseCacheKey);
   if (cachedResponse) return jsonOutput_(cachedResponse);
 
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = SpreadsheetApp.openById(TEAM_RECORDS_SPREADSHEET_ID_);
   const monthlySheets = getMonthlySheets_(ss);
   if (!monthlySheets.length) throw new Error('No monthly TP tab found from September 2026 onward.');
 
@@ -158,9 +160,15 @@ function refreshSuspensionStatusIfNeeded_(ss, currentMonthlySheet) {
   const cache = CacheService.getScriptCache();
   const key = 'leaderboard:suspension-refresh:v1:' + currentMonthlySheet.getName();
   if (cache.get(key)) return false;
-  refreshSuspensionStatus_(ss, currentMonthlySheet);
-  cache.put(key, '1', 3600);
-  return true;
+  try {
+    refreshSuspensionStatus_(ss, currentMonthlySheet);
+    cache.put(key, '1', 3600);
+    return true;
+  } catch (err) {
+    console.error('Suspension refresh failed:', err);
+    cache.put(key, 'error', 300);
+    return false;
+  }
 }
 
 function refreshSuspensionStatus_(ss, currentMonthlySheet) {
