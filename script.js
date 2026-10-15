@@ -28,12 +28,28 @@ const FALLBACK_DATA = {
 };
 
 const colors = ["#ffd65c","#9be8ff","#7ee29a","#a99cff","#ff8fbe","#ffb66e","#5bd6ce","#ff8181","#a8dd6e","#7cb7ff","#f9db79","#c5a4ff","#8ed7bc","#c7d0de","#ff9d76","#65e4ff","#f4a8ff","#a4f27a"];
+function currentBangkokMonthTab(){
+  const parts=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Bangkok',year:'numeric',month:'2-digit'}).formatToParts(new Date());
+  const year=Number(parts.find(p=>p.type==='year')?.value||0);
+  const month=Number(parts.find(p=>p.type==='month')?.value||0);
+  const names=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return year&&month>=1&&month<=12 ? `TP${names[month-1]}${year}` : '';
+}
+
+function monthLabelFromTab(tab){
+  const m=String(tab||'').match(/^TP(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)(\d{4})$/i);
+  if(!m) return tab||'';
+  const names={Jan:'January',Feb:'February',Mar:'March',Apr:'April',May:'May',Jun:'June',Jul:'July',Aug:'August',Sep:'September',Oct:'October',Nov:'November',Dec:'December'};
+  const key=m[1][0].toUpperCase()+m[1].slice(1).toLowerCase();
+  return `${names[key]} ${m[2]}`;
+}
+
 const state = {
   previousAchievements: new Map(),
   lastGood: null,
   initialized: false,
-  selectedMonth: new URLSearchParams(window.location.search).get('month') || '',
-  currentMonthTab: '',
+  selectedMonth: new URLSearchParams(window.location.search).get('month') || currentBangkokMonthTab(),
+  currentMonthTab: currentBangkokMonthTab(),
   availableMonths: [],
   fetchSeq: 0,
   fetchController: null
@@ -171,16 +187,33 @@ function installMonthSelector(){
 function updateMonthSelector(data){
   const select=document.querySelector('#monthSelector');
   if(!select) return;
-  const months=Array.isArray(data.availableMonths)&&data.availableMonths.length
-    ? data.availableMonths
+
+  let months=Array.isArray(data.availableMonths)&&data.availableMonths.length
+    ? [...data.availableMonths]
     : [{tab:data.sourceTab||'',label:data.monthLabel||data.sourceTab||'Current Month',isCurrent:true}];
+
+  const clientCurrent=currentBangkokMonthTab();
+  if(clientCurrent && !months.some(m=>m.tab===clientCurrent)){
+    months.unshift({tab:clientCurrent,label:monthLabelFromTab(clientCurrent),isCurrent:true});
+  }
+
+  months=months
+    .filter(m=>m&&m.tab)
+    .map(m=>({...m,isCurrent:m.tab===clientCurrent || !!m.isCurrent}))
+    .sort((a,b)=>{
+      const parse=t=>{const x=String(t).match(/^TP([A-Za-z]{3})(\d{4})$/); if(!x)return 0; const order={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11}; const k=x[1][0].toUpperCase()+x[1].slice(1).toLowerCase(); return Number(x[2])*12+(order[k]??0);};
+      return parse(b.tab)-parse(a.tab);
+    });
+
   state.availableMonths=months;
-  state.currentMonthTab=data.currentTab || (months.find(m=>m.isCurrent)||{}).tab || data.sourceTab || '';
-  if(!state.selectedMonth || !months.some(m=>m.tab===state.selectedMonth)) state.selectedMonth=data.sourceTab || state.currentMonthTab;
-  select.innerHTML=months.map(m=>`<option value="${escapeHtml(m.tab)}">${escapeHtml(m.label)}${m.isCurrent?' · LIVE':''}</option>`).join('');
-  select.value=data.sourceTab || state.selectedMonth;
+  state.currentMonthTab=clientCurrent || data.currentTab || (months.find(m=>m.isCurrent)||{}).tab || data.sourceTab || '';
+  if(!state.selectedMonth) state.selectedMonth=state.currentMonthTab;
+
+  select.innerHTML=months.map(m=>`<option value="${escapeHtml(m.tab)}">${escapeHtml(m.label||monthLabelFromTab(m.tab))}${m.tab===state.currentMonthTab?' · LIVE':''}</option>`).join('');
+  select.value=state.selectedMonth;
+
   const liveStatus=document.querySelector('#liveStatus');
-  const historical=data.isCurrentMonth===false || (state.currentMonthTab && data.sourceTab!==state.currentMonthTab);
+  const historical=state.selectedMonth!==state.currentMonthTab;
   document.body.classList.toggle('history-mode',historical);
   if(liveStatus) liveStatus.innerHTML=historical?'<span class="live-dot"></span> HISTORY':'<span class="live-dot"></span> LIVE';
 }
