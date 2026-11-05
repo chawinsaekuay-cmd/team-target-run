@@ -331,6 +331,9 @@ function refreshLeadQuotaStatus_(ss, currentMonthlySheet) {
   const sourceStaffIdx = headerIndex_(sourceHeaders, ['Staff code','Staff Code']);
   const sourceQuotaIdx = headerIndex_(sourceHeaders, ['R Target leads']);
   const sourceReceivedIdx = headerIndex_(sourceHeaders, ['R leads curently month','R leads currently month']);
+  if (sourceStaffIdx < 0 || sourceQuotaIdx < 0 || sourceReceivedIdx < 0) {
+    throw new Error('Lead quota source headers not found.');
+  }
   const sourceRows = sourceLastRow >= 4
     ? sourceSheet.getRange(4, 1, sourceLastRow - 3, sourceLastCol).getDisplayValues()
     : [];
