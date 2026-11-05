@@ -401,11 +401,16 @@ function getLeadQuotaStatus_(ss) {
     const checkedAt = String(row[0] || '').trim();
     const staffCode = String(row[1] || '').trim();
     if (!staffCode) return;
-    result.byStaffCode[staffCode] = {
-      leadQuota: toNumber(row[4]),
-      leadsReceived: toNumber(row[5]),
-      checkedAt
-    };
+
+    const existing = result.byStaffCode[staffCode];
+    if (!existing || !existing.checkedAt || (checkedAt && checkedAt >= existing.checkedAt)) {
+      result.byStaffCode[staffCode] = {
+        leadQuota: toNumber(row[4]),
+        leadsReceived: toNumber(row[5]),
+        checkedAt
+      };
+    }
+
     if (checkedAt && (!result.checkedAt || checkedAt > result.checkedAt)) result.checkedAt = checkedAt;
   });
   cache.put(cacheKey, JSON.stringify(result), 30);
