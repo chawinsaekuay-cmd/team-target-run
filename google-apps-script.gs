@@ -49,7 +49,7 @@ function doGet(e) {
   const runners = values
     .filter(function(row) {
       const team = String(cellAt_(row, idx.team) || '').trim();
-      return team.startsWith('Chawin') || team.startsWith('Junior');
+      return isManagedTeam_(team);
     })
     .filter(function(row) { return String(cellAt_(row, idx.name) || '').trim(); })
     .map(function(row) {
@@ -175,7 +175,7 @@ function refreshSuspensionStatus_(ss, currentMonthlySheet) {
   const helper = ss.getSheetByName('Suspended Status') || ss.insertSheet('Suspended Status');
   const roster = currentMonthlySheet.getRange(7,1,Math.max(currentMonthlySheet.getLastRow()-6,1),3).getDisplayValues().filter(function(row){
     const team=String(row[0]||'').trim(), code=String(row[1]||'').trim(), pc=String(row[2]||'').trim();
-    return code && pc && (team.indexOf('Chawin')===0 || team.indexOf('Junior')===0);
+    return code && pc && isManagedTeam_(team);
   });
   const sourceSs = SpreadsheetApp.openById(LEAD_ALLOCATION_SOURCE_SPREADSHEET_ID_);
   const sourceSheet = sourceSs.getSheetByName(LEAD_ALLOCATION_SOURCE_SHEET_);
@@ -318,7 +318,7 @@ function refreshLeadQuotaStatus_(ss, currentMonthlySheet) {
       const team = String(row[0] || '').trim();
       const staffCode = String(row[1] || '').trim();
       const pc = String(row[2] || '').trim();
-      return staffCode && pc && (team.startsWith('Chawin') || team.startsWith('Junior'));
+      return staffCode && pc && isManagedTeam_(team);
     });
 
   const sourceSs = SpreadsheetApp.openById(LEAD_ALLOCATION_SOURCE_SPREADSHEET_ID_);
@@ -740,6 +740,11 @@ function parseMonthlyTab_(name) {
   const monthIndex = months[match[1].toLowerCase()];
   const year = Number(match[2]);
   return { monthIndex, year, monthName: monthNames[monthIndex] };
+}
+
+function isManagedTeam_(team) {
+  const value = String(team || '').trim();
+  return value === 'Chawin (SM)' || /\(Sup\)$/i.test(value);
 }
 
 function headerIndex_(headers, names) {
