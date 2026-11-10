@@ -14,7 +14,7 @@ const TEAM_RECORDS_SPREADSHEET_ID_ = '1oHiR_HPolqckkMLMgKMTSJVkkBwJeyozYuioJF9UU
 function doGet(e) {
   const requestedMonth = String(e && e.parameter && e.parameter.month || '').trim();
   const scriptCache = CacheService.getScriptCache();
-  const responseCacheKey = `leaderboard:response:v4s2:${requestedMonth || 'latest'}`;
+  const responseCacheKey = `leaderboard:response:v7:${requestedMonth || 'latest'}`;
   const cachedResponse = scriptCache.get(responseCacheKey);
   if (cachedResponse) return jsonOutput_(cachedResponse);
 
@@ -48,10 +48,10 @@ function doGet(e) {
 
   const runners = values
     .filter(function(row) {
-      const team = String(cellAt_(row, idx.team) || '').trim();
-      return isManagedTeam_(team);
+      const staffCode = String(cellAt_(row, idx.staffCode) || '').trim();
+      const name = String(cellAt_(row, idx.name) || '').trim();
+      return !!staffCode && !!name;
     })
-    .filter(function(row) { return String(cellAt_(row, idx.name) || '').trim(); })
     .map(function(row) {
       return {
         team: cellAt_(row, idx.team),
@@ -174,8 +174,8 @@ function refreshSuspensionStatusIfNeeded_(ss, currentMonthlySheet) {
 function refreshSuspensionStatus_(ss, currentMonthlySheet) {
   const helper = ss.getSheetByName('Suspended Status') || ss.insertSheet('Suspended Status');
   const roster = currentMonthlySheet.getRange(7,1,Math.max(currentMonthlySheet.getLastRow()-6,1),3).getDisplayValues().filter(function(row){
-    const team=String(row[0]||'').trim(), code=String(row[1]||'').trim(), pc=String(row[2]||'').trim();
-    return code && pc && isManagedTeam_(team);
+    const code=String(row[1]||'').trim(), pc=String(row[2]||'').trim();
+    return !!code && !!pc;
   });
   const sourceSs = SpreadsheetApp.openById(LEAD_ALLOCATION_SOURCE_SPREADSHEET_ID_);
   const sourceSheet = sourceSs.getSheetByName(LEAD_ALLOCATION_SOURCE_SHEET_);
@@ -199,8 +199,8 @@ function refreshSuspensionStatus_(ss, currentMonthlySheet) {
   const cache=CacheService.getScriptCache();
   cache.remove('leaderboard:suspension:v2');
   cache.remove('leaderboard:suspension:v4');
-  cache.remove('leaderboard:response:v4s2:latest');
-  cache.remove('leaderboard:response:v4s2:'+currentMonthlySheet.getName());
+  cache.remove('leaderboard:response:v7:latest');
+  cache.remove('leaderboard:response:v7:'+currentMonthlySheet.getName());
   return output.length;
 }
 
@@ -315,10 +315,9 @@ function refreshLeadQuotaStatus_(ss, currentMonthlySheet) {
     .getRange(7, 1, Math.max(currentMonthlySheet.getLastRow() - 6, 1), 3)
     .getDisplayValues()
     .filter(row => {
-      const team = String(row[0] || '').trim();
       const staffCode = String(row[1] || '').trim();
       const pc = String(row[2] || '').trim();
-      return staffCode && pc && isManagedTeam_(team);
+      return !!staffCode && !!pc;
     });
 
   const sourceSs = SpreadsheetApp.openById(LEAD_ALLOCATION_SOURCE_SPREADSHEET_ID_);
@@ -381,8 +380,8 @@ function refreshLeadQuotaStatus_(ss, currentMonthlySheet) {
 
   const cache = CacheService.getScriptCache();
   cache.remove('leaderboard:lead-quota:v2');
-  cache.remove('leaderboard:response:v4s2:latest');
-  cache.remove(`leaderboard:response:v4s2:${currentMonthlySheet.getName()}`);
+  cache.remove('leaderboard:response:v7:latest');
+  cache.remove(`leaderboard:response:v7:${currentMonthlySheet.getName()}`);
   return output.length;
 }
 
