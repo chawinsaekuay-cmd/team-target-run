@@ -39,7 +39,7 @@ const state = {
   availableMonths: [],
   fetchSeq: 0,
   fetchController: null,
-  allTimeSort: 'totalRevenue'
+  allTimeSort: 'bestMonthRevenue'
 };
 
 function money(v){ return new Intl.NumberFormat('en-US',{maximumFractionDigits:0}).format(v || 0); }
@@ -245,7 +245,6 @@ function allTimeMetricMeta(key){
     avgConversion:{label:'Avg Conversion',format:v=>pct(v)},
     revPerDeal:{label:'Revenue / Deal',format:v=>'฿'+money(v)},
     bestMonthRevenue:{label:'Best Month Revenue',format:v=>'฿'+money(v)},
-    recordedMonths:{label:'Recorded Months',format:v=>money(v)}
   };
   return map[key]||map.totalRevenue;
 }
@@ -269,7 +268,7 @@ function renderAllTimeHigh(data){
   box.innerHTML=top.map((r,i)=>{
     const rank=i+1;
     const medalIcon=rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'#'+rank;
-    const sub=key==='bestMonthRevenue' && r.bestRevMonth ? escapeHtml(r.bestRevMonth) : money(r.recordedMonths)+' recorded month'+(Number(r.recordedMonths)===1?'':'s');
+    const sub=key==='bestMonthRevenue' && r.bestRevMonth ? escapeHtml(r.bestRevMonth) : '';
     return '<article class="all-time-item rank-'+rank+'">'+
       '<div class="all-time-rank">'+medalIcon+'</div>'+
       '<div class="all-time-main">'+
