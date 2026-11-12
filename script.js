@@ -38,7 +38,8 @@ const state = {
   currentMonthTab: currentBangkokMonthTab(),
   availableMonths: [],
   fetchSeq: 0,
-  fetchController: null
+  fetchController: null,
+  allTimeSort: 'totalRevenue'
 };
 
 function money(v){ return new Intl.NumberFormat('en-US',{maximumFractionDigits:0}).format(v || 0); }
@@ -170,6 +171,16 @@ function installMonthSelector(){
   });
 }
 
+function installAllTimeSort(){
+  const select=document.querySelector('#allTimeSort');
+  if(!select || select.dataset.bound==='1') return;
+  select.dataset.bound='1';
+  select.value=state.allTimeSort;
+  select.addEventListener('change',()=>{
+    state.allTimeSort=select.value;
+    if(state.lastGood) renderAllTimeHigh(state.lastGood);
+  });
+}
 function updateMonthSelector(data){
   const select=document.querySelector('#monthSelector');
   if(!select) return;
@@ -224,6 +235,52 @@ function normalize(payload){
   return {...payload,runners};
 }
 
+function allTimeMetricMeta(key){
+  const map={
+    totalRevenue:{label:'Total Revenue',format:v=>'฿'+money(v)},
+    avgRevenue:{label:'Avg Revenue / Month',format:v=>'฿'+money(v)},
+    totalDeals:{label:'Total Deals',format:v=>money(v)},
+    avgDeals:{label:'Avg Deals / Month',format:v=>Number(v||0).toFixed(2)},
+    avgKpi:{label:'Avg KPI',format:v=>pct(v)},
+    avgConversion:{label:'Avg Conversion',format:v=>pct(v)},
+    revPerDeal:{label:'Revenue / Deal',format:v=>'฿'+money(v)},
+    bestMonthRevenue:{label:'Best Month Revenue',format:v=>'฿'+money(v)},
+    recordedMonths:{label:'Recorded Months',format:v=>money(v)}
+  };
+  return map[key]||map.totalRevenue;
+}
+
+function renderAllTimeHigh(data){
+  const box=document.querySelector('#allTimeHigh');
+  if(!box) return;
+  const rows=Array.isArray(data.allTimeHigh)?data.allTimeHigh:[];
+  const key=state.allTimeSort||'totalRevenue';
+  const meta=allTimeMetricMeta(key);
+  const top=[...rows]
+    .filter(r=>Number(r[key])>0)
+    .sort((a,b)=>Number(b[key]||0)-Number(a[key]||0) || Number(b.totalRevenue||0)-Number(a.totalRevenue||0) || String(a.name||'').localeCompare(String(b.name||'')))
+    .slice(0,5);
+
+  if(!top.length){
+    box.innerHTML='<div class="all-time-empty">No historical records yet</div>';
+    return;
+  }
+
+  box.innerHTML=top.map((r,i)=>{
+    const rank=i+1;
+    const medalIcon=rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'#'+rank;
+    const sub=key==='bestMonthRevenue' && r.bestRevMonth ? escapeHtml(r.bestRevMonth) : money(r.recordedMonths)+' recorded month'+(Number(r.recordedMonths)===1?'':'s');
+    return '<article class="all-time-item rank-'+rank+'">'+
+      '<div class="all-time-rank">'+medalIcon+'</div>'+
+      '<div class="all-time-main">'+
+        '<div class="all-time-name">'+escapeHtml(r.name)+'</div>'+
+        '<div class="all-time-value">'+meta.format(r[key])+'</div>'+
+        '<div class="all-time-sub">'+sub+'</div>'+
+      '</div>'+
+      '<div class="all-time-level">'+escapeHtml(r.latestLevel||'—')+'</div>'+
+    '</article>';
+  }).join('');
+}
 function renderKpis(data){
   const rs=data.runners;
   const summary=data.summary||{};
@@ -448,6 +505,7 @@ function render(data){
   data=normalize(data);
   state.lastGood=data;
   updateMonthSelector(data);
+  renderAllTimeHigh(data);
   renderKpis(data);
   renderPodium(data);
   renderSalesPodium(data);
@@ -537,6 +595,7 @@ document.querySelector('#fullscreenBtn').addEventListener('click',()=>{if(!docum
 installStadiumTweaks();
 installSalesPodium();
 installMonthSelector();
+installAllTimeSort();
 fetchData();
 setInterval(()=>{
   if(!state.currentMonthTab||!state.selectedMonth||state.selectedMonth===state.currentMonthTab) fetchData();
