@@ -14,7 +14,7 @@ const TEAM_RECORDS_SPREADSHEET_ID_ = '1oHiR_HPolqckkMLMgKMTSJVkkBwJeyozYuioJF9UU
 function doGet(e) {
   const requestedMonth = String(e && e.parameter && e.parameter.month || '').trim();
   const scriptCache = CacheService.getScriptCache();
-  const responseCacheKey = `leaderboard:response:v7:${requestedMonth || 'latest'}`;
+  const responseCacheKey = `leaderboard:response:v8:${requestedMonth || 'latest'}`;
   const cachedResponse = scriptCache.get(responseCacheKey);
   if (cachedResponse) return jsonOutput_(cachedResponse);
 
@@ -133,6 +133,14 @@ function doGet(e) {
     runnerCount: runners.length
   };
 
+  let allTimeHigh = [];
+  try {
+    allTimeHigh = getAllTimeHigh_(ss);
+  } catch (err) {
+    console.error('All Time High read failed:', err);
+    allTimeHigh = [];
+  }
+
   const payload = JSON.stringify({
     updatedAt: new Date().toISOString(),
     suspensionCheckedAt: suspension.checkedAt,
@@ -142,12 +150,64 @@ function doGet(e) {
     isCurrentMonth,
     monthLabel: `${parsed.monthName} ${parsed.year}`,
     availableMonths,
+    allTimeHigh,
     summary,
     runners
   });
 
   scriptCache.put(responseCacheKey, payload, 5);
   return jsonOutput_(payload);
+}
+
+function getAllTimeHigh_(ss) {
+  const sheet = ss.getSheetByName('Team Ov Ind.');
+  if (!sheet) return [];
+
+  const startRow = 15;
+  const startCol = 16; // P
+  const width = 12;    // P:AA
+  const lastRow = Math.max(sheet.getLastRow(), startRow);
+  const values = sheet.getRange(startRow, startCol, lastRow - startRow + 1, width).getDisplayValues();
+  if (!values.length) return [];
+
+  const headers = values[0].map(function(v){ return String(v || '').trim(); });
+  const idx = {
+    name: headerIndex_(headers, ['PC']),
+    recordedMonths: headerIndex_(headers, ['Recorded Months']),
+    totalRevenue: headerIndex_(headers, ['Total Revenue']),
+    avgRevenue: headerIndex_(headers, ['Avg Rev / Month']),
+    totalDeals: headerIndex_(headers, ['Total Deals']),
+    avgDeals: headerIndex_(headers, ['Avg Deals / Month']),
+    avgKpi: headerIndex_(headers, ['Avg KPI']),
+    avgConversion: headerIndex_(headers, ['Avg Conversion']),
+    revPerDeal: headerIndex_(headers, ['Rev / Deal']),
+    bestRevMonth: headerIndex_(headers, ['Best Rev Month']),
+    bestMonthRevenue: headerIndex_(headers, ['Best Month Rev']),
+    latestLevel: headerIndex_(headers, ['Latest Level'])
+  };
+
+  return values.slice(1)
+    .map(function(row){
+      const name = String(cellAt_(row, idx.name) || '').trim();
+      const monthsRaw = String(cellAt_(row, idx.recordedMonths) || '').trim();
+      return {
+        name: name,
+        recordedMonths: toNumber(monthsRaw),
+        totalRevenue: toNumber(cellAt_(row, idx.totalRevenue)),
+        avgRevenue: toNumber(cellAt_(row, idx.avgRevenue)),
+        totalDeals: toNumber(cellAt_(row, idx.totalDeals)),
+        avgDeals: toNumber(cellAt_(row, idx.avgDeals)),
+        avgKpi: toPercent(cellAt_(row, idx.avgKpi)),
+        avgConversion: toPercent(cellAt_(row, idx.avgConversion)),
+        revPerDeal: toNumber(cellAt_(row, idx.revPerDeal)),
+        bestRevMonth: String(cellAt_(row, idx.bestRevMonth) || '').trim(),
+        bestMonthRevenue: toNumber(cellAt_(row, idx.bestMonthRevenue)),
+        latestLevel: String(cellAt_(row, idx.latestLevel) || '').trim()
+      };
+    })
+    .filter(function(r){
+      return r.name && r.name !== 'ALL CURRENT PCs' && r.recordedMonths > 0;
+    });
 }
 
 function jsonOutput_(payload) {
@@ -199,8 +259,8 @@ function refreshSuspensionStatus_(ss, currentMonthlySheet) {
   const cache=CacheService.getScriptCache();
   cache.remove('leaderboard:suspension:v2');
   cache.remove('leaderboard:suspension:v4');
-  cache.remove('leaderboard:response:v7:latest');
-  cache.remove('leaderboard:response:v7:'+currentMonthlySheet.getName());
+  cache.remove('leaderboard:response:v8:latest');
+  cache.remove('leaderboard:response:v8:'+currentMonthlySheet.getName());
   return output.length;
 }
 
@@ -380,8 +440,8 @@ function refreshLeadQuotaStatus_(ss, currentMonthlySheet) {
 
   const cache = CacheService.getScriptCache();
   cache.remove('leaderboard:lead-quota:v2');
-  cache.remove('leaderboard:response:v7:latest');
-  cache.remove(`leaderboard:response:v7:${currentMonthlySheet.getName()}`);
+  cache.remove('leaderboard:response:v8:latest');
+  cache.remove(`leaderboard:response:v8:${currentMonthlySheet.getName()}`);
   return output.length;
 }
 
